@@ -66,6 +66,8 @@ Clicking "Save" in the bottom right will save the new version, which means that 
 
 # FoundryVTT Module
 
-Does something, probably
+Use this url:
+https://github.com/Proximitron/juvencas-flox/releases/latest/download/module.json
 
 ## Changelog
+
