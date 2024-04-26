@@ -1,0 +1,1 @@
+console.log('flox-babyfur | Lib startup!');

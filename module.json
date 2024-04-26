@@ -1,6 +1,6 @@
 {
-  "id": "module",
-  "title": "New Module",
+  "id": "juvencas-flox",
+  "title": "Juvencas Flox",
   "description": "",
   "version": "#{VERSION}#",
   "library": "false",
@@ -11,6 +11,11 @@
     "maximum": 11
   },
   "authors": [
+    {
+      "name": "Floximo",
+      "url": "",
+      "discord": "proximitron"
+    },
     {
       "name": "The League of Extraordinary FVTT Developers",
       "url": "https://github.com/League-of-Foundry-Developers",
@@ -29,6 +34,29 @@
   ],
   "styles": [
     "styles/module.css"
+  ],
+  "packs": [
+    {
+      "name": "juvencas-items",
+      "label": "Juvencas Items",
+      "system": "sfrpg",
+      "path": "./packs/juvencas-items",
+      "type": "Item",
+	"ownership": {
+		"PLAYER": "LIMITED",
+		"ASSISTANT": "OWNER"
+	},
+	"flags": {}
+    },
+    {
+      "name": "item-2-items",
+      "label": "Items (Shared)",
+	  "system": "sfrpg",
+      "path": "packs/item-2-items.db",
+      "entity": "Item",
+      "type": "Item",
+      "package": "forge-vtt-shared-compendiums-babyfur-by-floximo"
+    },
   ],
   "languages": [
     {
