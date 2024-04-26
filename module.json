@@ -42,11 +42,11 @@
       "system": "sfrpg",
       "path": "./packs/juvencas-items",
       "type": "Item",
-	"ownership": {
-		"PLAYER": "LIMITED",
-		"ASSISTANT": "OWNER"
-	},
-	"flags": {}
+      "ownership": {
+          "PLAYER": "LIMITED",
+          "ASSISTANT": "OWNER"
+      },
+      "flags": {}
     },
     {
       "name": "item-2-items",

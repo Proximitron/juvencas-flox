@@ -48,14 +48,18 @@ Hooks.on("updateItem", function(item, data, event, affectedUid) {
 });
 
 Hooks.on("closeApplication", function(app,init){
-	if(typeof app === "RollDialog" && app.rolledButton !== null){
-		const diapieBoni = app.availableModifiers.find(m => m.name === "Nonlethal" && m.enabled);
-		if(diapieBoni){
-			console.log("DIAPIE BONI ACTIVE!");
+	if(typeof app?.rolledButton === 'string'){
+		let actor = app?.contexts?.allContexts?.actor?.entity;
+		if(actor === undefined) actor = app?.contexts?.allContexts?.owner?.entity;
+
+		if(actor === undefined){
+			console.log("Context doesn't contain actor for closeApplication");
+			console.log(app);
+			return;
 		}
-		else {
-			console.log("DIAPIE BONI NOT ACTIVE!");
-		}
+
+		const helper = DiaperActorHelper.byActor(actor);
+		helper.checkModifierImpact(app.availableModifiers);
 	}
 });
 Hooks.on("onActorRest", function(restResults){
