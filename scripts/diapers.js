@@ -1,5 +1,8 @@
 //import {ItemSFRPG} from "../../../../systems/sfrpg/module/item/item.js";
-import {ActorSFRPG} from "../../../../systems/sfrpg/module/actor/actor.js";
+//import {ActorSFRPG} from "../../../../systems/sfrpg/module/actor/actor.js";
+import {ActorSheetSFRPG} from "../../../../systems/sfrpg/module/actor/sheet/base.js";
+
+
 import {ActorItemHelper, getFirstAcceptableStorageIndex, moveItemBetweenActorsAsync} from "../../../../systems/sfrpg/module/actor/actor-inventory-utils.js";
 export function containsItems(t){
     return t&&t.system.container?.contents&&t.system.container.contents.length>0
@@ -7,6 +10,34 @@ export function containsItems(t){
 export function getChildItems(t,e){
     return t&&containsItems(e)?t.filterItems((t=>e.system.container.contents.find((e=>e.id===t.id)))):[]
 }
+export function getRandomKey(obj) {
+    const itemNames = Object.keys(obj);
+    if (itemNames.length === 0) {
+        throw new Error("Object is empty");
+    }
+    return itemNames[Math.floor(Math.random() * itemNames.length)];
+}
+export function getRandomValue(obj) {
+    return obj[getRandomKey(obj)];
+}
+String.prototype.formatUnicorn = String.prototype.formatUnicorn ||
+    function () {
+        "use strict";
+        var str = this.toString();
+        if (arguments.length) {
+            var t = typeof arguments[0];
+            var key;
+            var args = ("string" === t || "number" === t) ?
+                Array.prototype.slice.call(arguments)
+                : arguments[0];
+
+            for (key in args) {
+                str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
+            }
+        }
+
+        return str;
+    };
 function nFormatter(num, digits) {
     var si = [
         { value: 1, symbol: "" },
@@ -84,7 +115,9 @@ export class ActorHelper extends ActorItemHelper {
         if (actorUser) return actorUser;
         return game.user;
     }
-
+    get unconscious(){
+        return this?.actor?.system?.conditions?.unconscious === true;
+    }
     message(targets, message, gmonly = false) {
         const gmList = game.users.filter((u) => u.isGM && u.id !== this.actorUser.id).map((u) => u.id);
         if (gmonly) {
@@ -186,10 +219,10 @@ export class NanocyteActorHelper extends ActorHelper  {
         const percentile = Math.floor( (this.actor.system.currency.upb * 100) / this.nanocyteBaseMass );
 
         const oldBaseVal = found.system.base
-        if(oldBaseVal != percentile){
+        if(oldBaseVal !== percentile){
             updates["system.base"] = percentile;
         }
-        if(Object.keys(updates) !== 0){
+        if(Object.keys(updates).length > 0){
             found.update(updates);
         }
         // Stability calc END
@@ -241,7 +274,6 @@ export class NanocyteActorHelper extends ActorHelper  {
             }
         }
         // Conditions END
-
     }
 
 
@@ -265,32 +297,44 @@ export class DiaperActorHelper extends ActorHelper {
         super(t, e, n, o = {});
     }
     static PEE = "Pee";
-    static POOP = "Poop";
+    static POO = "Poop";
     static CUM = "Cum";
     static WATER = "Water";
 
-    static CUM_PREVENTION = "Caged";
-
     static DEFAULT_POTTY_TRAINING = "Accident Prone";
-    static POOP_ALLOWED_POTTY_TRAINING = "Stinky";
+    static POO_ALLOWED_POTTY_TRAINING = "Stinky";
     static CUM_ALLOWED_POTTY_TRAINING = "Naughty";
+
+    static CUM_PREVENTION = "Caged";
 
     static DIRTY_CLOTH = "Soiled Cloth";
 
+    static items = {
+        // Fluids
+        [DiaperActorHelper.PEE]: "dkV4O741UrDLsPcP",
+        [DiaperActorHelper.POO]: "F8njSFNStuMBqCzG",
+        [DiaperActorHelper.CUM]: "4tLWbPTmzDnxOC8X",
+        [DiaperActorHelper.WATER]: "I6sgq423yMtlp4cg",
+
+        // Trainings
+        [DiaperActorHelper.DEFAULT_POTTY_TRAINING]: "WlhdAgu4flhYP4hX",
+        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: "7ptWGtpU7hnLoIHf",
+        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: "4UO4QD4eje9LFXYQ",
+
+        // Buffs/Debuffs
+        [DiaperActorHelper.DIRTY_CLOTH]: "a5WzbEPn0gyEO3AM",
+    }
+    static trainings = {
+        [DiaperActorHelper.DEFAULT_POTTY_TRAINING]: DiaperActorHelper.PEE,
+        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: DiaperActorHelper.POO,
+        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: DiaperActorHelper.CUM
+    }
+
     async item(name) {
-        let items = {
-
-        };
-        items[this.constructor.PEE] = "dkV4O741UrDLsPcP";
-        items[this.constructor.POOP] = "F8njSFNStuMBqCzG";
-        items[this.constructor.CUM] = "4tLWbPTmzDnxOC8X";
-        items[this.constructor.WATER] = "I6sgq423yMtlp4cg";
-
-        items[this.constructor.DIRTY_CLOTH] = "a5WzbEPn0gyEO3AM";
-
-        items[this.constructor.DEFAULT_POTTY_TRAINING] = "WlhdAgu4flhYP4hX";
-
-        return await this.itemPack.getDocument(items[name]);
+        if (!(name in this.constructor.items)) {
+            throw new Error(`Item ${name} not found in items list`);
+        }
+        return await this.itemPack.getDocument(this.constructor.items[name]);
     }
     static byActor(actor){
         const tokens = actor.getActiveTokens();
@@ -300,6 +344,31 @@ export class DiaperActorHelper extends ActorHelper {
     }
     get diaper() {
         return this.actor.items.find(dp => dp.name === "Diaper" && dp.system.equipped);
+    }
+    requirePeePottyTraining(){
+        if(this.peePottyTraining) return true;
+        console.log("Macro | " + this.actor.name + " is not able to have pee accidents!");
+        return false;
+    }
+
+    get peePottyTraining() {
+        return this.actor.items.find(i => i.name === this.constructor.DEFAULT_POTTY_TRAINING)
+    }
+    requirePoopPottyTraining(){
+        if(this.poopPottyTraining) return true;
+        console.log("Macro | " + this.actor.name + " is not able to have poopy accidents!");
+        return false;
+    }
+    get poopPottyTraining() {
+        return this.actor.items.find(i => i.name === this.constructor.POOP_ALLOWED_POTTY_TRAINING)
+    }
+    requireCumPottyTraining(){
+        if(this.cumPottyTraining) return true;
+        console.log("Macro | " + this.actor.name + " is not able to have cum accidents!");
+        return false;
+    }
+    get cumPottyTraining() {
+        return this.actor.items.find(i => i.name === this.constructor.CUM_ALLOWED_POTTY_TRAINING)
     }
     get protectionLevel(){
         if(this.diaper) return 3;
@@ -313,36 +382,62 @@ export class DiaperActorHelper extends ActorHelper {
         return amount;
     }
     // TODO: Real state
-    get unconscious(){
-        return true;
-    }
 
     get diaperState() {
 
     }
     checkModifierImpact(modifiers){
-
-        const found = modifiers.filter(m => m.enabled && m.item && m.item.name === "Accident Prone");
-        found.forEach(m => this.wetManager(1,1));
+        const found = modifiers.filter(m => m.enabled && m.item && this.constructor.trainings[m.item.name] !== undefined);
+        found.forEach(m => this.rollPottyCheck(m.item));
     }
-    rollPottyCheck(){
+    rollPottyCheck(source){
+        let accidentType = this.constructor.trainings[source.name];
+        const poopAccidentChancePercent = 20;
+        const peeAccidentChancePercent = 60;
+        const rand = Math.random() * 100.0;
+
+
+        let poopCaseType = accidentType;
+        if(this.poopPottyTraining){
+            poopCaseType = this.constructor.trainings[DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING];
+        }
+
+        if(rand < (poopAccidentChancePercent / 2)){
+            this.accidentManager(poopCaseType, poopCaseType === accidentType ? 3 : 2);
+        }
+        else if(rand < poopAccidentChancePercent){
+            this.accidentManager(poopCaseType,poopCaseType === accidentType ? 2 : 1);
+        }
+        else if(rand < peeAccidentChancePercent / 2){
+            this.accidentManager(accidentType,2);
+        }
+        else if(rand < peeAccidentChancePercent){
+            this.accidentManager(accidentType,1);
+        }
+        else return;
 
     }
 
-    async wetManager(amount, type = 1) {
+    get isConscious(){
+        return true;
+    }
+    async accidentManager(itemName, amount, subType = undefined) {
+        if(subType === undefined) subType = this.isConscious ? "normal" : "dream";
         if (amount > 0) {
             if(this.protectionLevel > this.filledAmount) {
                 const toAdd = Math.min(this.protectionLevel-this.filledAmount,amount);
                 amount -= toAdd;
-                this.addItem(this.constructor.PEE, toAdd, this.diaper);
-                this.informAboutAccident(this.constructor.PEE, 1);
+                await this.addItem(itemName, toAdd, this.diaper);
+                if(amount <= 0) {
+                    this.informAboutAccident(itemName,subType);
+                }
             }
             if(amount > 0){
                 const foundList = await this.getItems(this.constructor.DIRTY_CLOTH,this.actor);
                 if(foundList.length <= 0) {
                     this.addItem(this.constructor.DIRTY_CLOTH, 1, this.actor);
                 }
-                this.informAboutAccident(this.constructor.DIRTY_CLOTH, 1);
+                this.informAboutAccident(itemName,"accident");
             }
             if(amount > 0) {
                 console.log(`Macro | wetManager failed to execute request. ${amount} left in request.`);
@@ -350,246 +445,111 @@ export class DiaperActorHelper extends ActorHelper {
         }
         return false;
     }
-    async informAboutAccident(type, nr) {
-        console.log(`Macro | ${this.actor.name} had an ${type}-Accident nr ${nr}`);
 
-        const nighttime = this.unconscious;
-        const messageHeaderPCSelf = "<b>Uh-Oh!</b><br>";
+    static informsMsg = {
+        concentrating: {
+            normal: ["{name} was concentrating really hard on what they are doing.","{name} got a bit distracted.","Momentarily distracted {name} forgot something..."],
+            dream: ["Deep in a slumber."]
+        },
+        [DiaperActorHelper.PEE]: {
+            normal: ["{name} pauses their adventure, looking 🌧 momentarily puzzled 🌧, but then continues with a contented grin.",
+                "A warm glow seems to emanate from {name}, and they look more 🌧 relaxed 🌧 than before.", "You hear a surprised noise from {name} as their diaper is getting 🌧 warm 🌧.",
+                "{name}'s cheeks turn a slight shade of pink as they momentarily shift from 🌧 foot to foot 🌧.",
+                "{name} momentarily glances down, then up with a reassured smile as if a 🌧 mild inconvenience 🌧 was smoothly handled by their diaper."],
+            dream: ["A gentle, warm spring bubbles up in {name}'s dreamland, surrounding them with 🌧 soothing warmth 🌧.","In one of {name}'s dreams it seams to 🌧 rain 🌧.",
+                "A very big, 🌧 warm lake 🌧. {name} feels happy and relaxed.", "{name} feels fuzzy and warm.", "Unnoticed by {name}, a 🌧 containment breach 🌧 occurred under the blankie.",
+                "{name} dreams of floating down a peaceful river, basking in the gentle warmth of the sun.","{name} dreams of exploring a lush, alien planet with streams of 🌧 liquid gold 🌧 that feel pleasantly warm.",
+                "In the dreamspace, {name} visits a thermal moon where geysers burst with soothing, 🌧 warm vapors 🌧."],
+            accident: ["Oops! Looks like {name}'s diapers had 🌧 containment breach 🌧! Clean-up required!",
+                "Unexpectedly, there seems to be a major 🌧 leak 🌧 around {name}. Maintenance required immediatly.",
+                "Looks like {name}'s containment system was overwhelmed. There's a bit of a 🌧 spill 🌧 that needs attention!",
+                "There’s a noticeable 🌧 puddle 🌧 forming around {name}, an indication of an unexpected overflow."]},
+        [DiaperActorHelper.POO]: {
+            normal: ["{name} takes a moment, concentrating intensely on a 💩 'difficult task' 💩 before smiling triumphantly.",
+                "{name} freezes up for a second and squats down. They makes a small, cute noise followed by a 💩 relieved 💩 smile.",
+                "You notice {name} engaging in some secretive, 💩 strenuous activity 💩, but they soon look up with a grin of success.",
+                "Suddenly, {name} hunches over slightly, their face shows determination, followed by a joyful 💩 relief 💩.",
+                "Something strange gurgles in the tummy of {name}. They squad down a bit and 💩 push 💩 slightly. That feels a lot better!"],
+            dream: [
+                "A princes appears in the dreams of {name}. They ask for help pushing a big door open. You push and 💩 push 💩! Its very hard! You strain again and finally it gives way. Phu!",
+                "Half asleep {name} feels a tummy ache. They strain, trying to make it go away. A 💩 big sigh 💩 of relieve as they fall asleep.",
+                "Investigating a big muddy swamp, {name} suddenly gets stuck. 💩 Icky 💩!",
+                "Dreaming of a mysterious space station, {name} solves an intricate puzzle to unlock a sealed portal, 💩 clearing 💩 an ancient venting shaft.",
+                "Midway through deciphering alien glyphs on their blocks, {name}'s diaper encounters an unexpected 💩 system overload 💩, prompting an emergency maintenance break.",
+                "{name} dreams of being a famous baker, kneading a particularly stubborn dough until it's just 💩 perfect 💩.",
+                "Lost in a foggy forest in their dreams, {name} stumbles upon a stubborn log blocking their path. With 💩 great effort 💩, they manage to move it aside."],
+            accident: ["Uh oh! {name} has experienced a major 💩 containment failure 💩. Immediate assistance needed!",
+                "An unexpected 💩 mishap 💩 has occurred near {name}, suggesting a cleanup squad might be needed!",
+                "It appears {name} overestimated their 💩 containment capacity 💩. A bath is in order!",
+                "{name}'s adventures lead to an unplanned escape attempt by some rebellious cargo!"]
+        },
+        [DiaperActorHelper.CUM]: {
+            normal: ["{name} feels themself getting close! It's amazing, it's OH! ♥ OH ♥!!", "{name} making more and more happy noises until something happens. They makes another ♥ cute noise ♥, followed by a really big smile!"],
+            dream: ["{name} dreams of a happy place, it feels soooo ♥ good ♥! But oddly sticky...",
+                "In deep dream, it comes! You are the winner! {name} don't know of what but it feel good! Its ♥ exhilarating ♥! Phu!",
+                "Half asleep {name} feels how something amazing is happening. It builds and finally releases in a ♥ big clash ♥! Exhausted they fall asleep immediately."],
+            accident: ["Oh NO! {name}'s energetic humping ripped open their diaper. It's... it's everywhere! What a ♥ sticky ♥ mess!"]
+        },
+        [DiaperActorHelper.CUM_PREVENTION]: {
+            normal: ["{name} gets tense and agitated, red in the face and whiny. But but 🔐 nothing 🔐 really happens, beside some cute noises."],
+            dream: ["{name} dreams of their happy place, but something 🔐 prevents 🔐 them from climbing onto the happy cloud, floating above."]
+        }
+    };
+
+    infoMsg(type,subType){
+        let key = this.constructor.informsMsg[type][subType];
+        if(key === "undefined"){
+            key = this.constructor.informsMsg[type]["normal"];
+        }
+        return getRandomValue(key).formatUnicorn({"name" : this.actor.name})
+    }
+    async informAboutAccident(type,subType,reason = "concentrating") {
+        console.log(`Macro | ${this.actor.name} had an ${type}-Accident of ${type}`);
+
         const messageHeaderPC = "<b>Uh-Oh!</b><br>";
         const messageHeaderGM = "<b>Accident Report</b><br>";
         let messageContentGM = "";
 
         let sneakDcMod = 0;
         let selfAwarenessDifficultDcMod = 10;
-        let watcherPerspective = "";
-        let selfPerspective = "";
-        let rand = Math.random() * 3;
+        let watcherPerspective = this.infoMsg(reason,subType);
+        const accident = subType === "accident"
 
         if (type === this.constructor.PEE) {
-            let peeLevel = this.filledAmount;
-            const peeProtect = this.protectionLevel;
+            messageContentGM += `${this.actor.name} wet themselfs<br><br>`;
+            watcherPerspective+= this.infoMsg(type,subType);
 
-            selfAwarenessDifficultDcMod += peeProtect*2; // More protection makes it more difficult
-            selfAwarenessDifficultDcMod -= peeLevel*2; // More pee makes it less difficult
-
-            if(nighttime){
-                watcherPerspective += `You see ${this.actor.name} tense up a bit, then sigh relieved.`;
-                if(rand < 1){
-                    selfPerspective += `In one of your dreams it seams to rain.`;
-                }
-                else if(rand < 2){
-                    selfPerspective += `You dream of a big lake and it gets bigger and bigger, but its very warm.`;
-                }
-                else {
-                    selfPerspective += `In your dreams you feel very fuzzy and warm.`;
-                }
-
-            }
-            else {
-                selfPerspective += `You feel your diaper getting warmer. Strange...`;
-                watcherPerspective += `You see ${this.actor.name} tense up a bit, then sigh relieved.`;
+            if(accident){
+                messageContentGM += `${this.actor.name} had a major pee accident!<br><br>`;
             }
 
-
-            messageContentGM += `${this.actor.name} wet himself<br><br>`;
         } else if (type === this.constructor.POOP) {
-            sneakDcMod -= 5;
-            let poopLevel = this.filledAmount;
-            selfAwarenessDifficultDcMod -= poopLevel * 3; // More poop makes it less difficult, protection level doesn't mather
-
-            if(nighttime){
-                if(rand < 1){
-                    selfPerspective += `In you dream you wander a muddy swamp. Feels oddly sticky!`;
-                }
-                else if(rand < 2){
-                    selfPerspective += `A princes comes to your in your dreams. You are promised something in exchange for pushing a big door open. You push and push! Its very hard! You strain again and finally it gives way. Phu!`;
-                }
-                else {
-                    selfPerspective += `Half asleep you feel your tummy aching. You strain half asleep, trying to make it go away. You sigh in relieve as it does and fall asleep immediately.`;
-                }
-            }else {
-                watcherPerspective += `You see ${this.actor.name} freeze up for a second and squatting down. ${this.actor.name} makes a small, cute noise followed by a relieved smile.`;
-                selfPerspective += `You feel your tummy gurgle. You squad down a bit and push slightly. That feels a lot better!`;
-            }
-
             messageContentGM += `${this.actor.name} pooped himself<br><br>`;
+            watcherPerspective+= this.infoMsg(type,subType);
+
+            if(accident){
+                messageContentGM += `${this.actor.name} had a major poop accident!<br><br>`;
+            }
         } else if (type === this.constructor.CUM) {
-            sneakDcMod -= 10; // Difficult to hide
-            selfAwarenessDifficultDcMod -= 20; // Difficult to miss
-
-            if(nighttime){
-                if(rand < 1){
-                    selfPerspective += `You dream of your happy place, it feels soooo good. Oddly sticky!`;
-                }
-                else if(rand < 2){
-                    selfPerspective += `In deep dream, it comes to you! You are the winner! You don't know of what but you feel good! Its exhilarating! Phu!`;
-                }
-                else {
-                    selfPerspective += `Half asleep you feel something amazing happening. It builds and finally releases in a big clash! You are exhausted and fall asleep immediately.`;
-                }
-            }else {
-                watcherPerspective += `You see and hear ${this.actor.name} making more and more happy noises until something happens. ${this.actor.name} makes a cute noise, followed by a really big smile!`;
-                selfPerspective += `You feel yourself getting close! It's amazing, it's OH! ♥ OH ♥!!`;
-            }
-
+            watcherPerspective+= this.infoMsg(type,subType);
             messageContentGM += `${this.actor.name} did cummies<br><br>`;
+            if(accident){
+                messageContentGM += `${this.actor.name} had a major cummies accident<br><br>`;
+            }
         } else if (type === this.constructor.CUM_PREVENTION) {
-            sneakDcMod = 5; // Easy to hide
-            selfAwarenessDifficultDcMod -= 10; // Difficult to miss
-
-            if(nighttime){
-                selfPerspective += `You dream of your happy place, but something prevents you from fully being happy!`;
-            }
-            else {
-                watcherPerspective += `You see and hear ${this.actor.name} getting a bit tense and agitated, getting a little red and whiny. But but nothing really happens.`;
-                selfPerspective += `You feel yourself getting close, very close, but something prevents you to go over the edge!`;
-            }
-        } else if (type === this.constructor.DIRTY_CLOTH) {
-            sneakDcMod -= 10;
-            selfAwarenessDifficultDcMod -= 10;
-            if(nighttime) {
-                if (nr === 2) {
-                    selfPerspective += `This vast, muddy swamp! You fight, step for step, feel the ground slowly swallowing you. You wake up suddenly and find yourself in your own mess! Oh no!`;
-                }
-                else {
-                    selfPerspective += `You swim in a vast lake, as you are suddenly pulled under... drowning, you wake startled and find yourself lying in your own pee. You wet the bed!`;
-                }
-            }
-            else{
-                if (nr === 2) {
-                    watcherPerspective += `"${this.actor.name} squads and makes a grunting noise. Then, for everyone to see, ${this.actor.name} has a big accident, making his cloth very dirty.`;
-                    selfPerspective += `You can't stop it as it running down your legs. That's not pee!`;
-                    messageContentGM += `${this.actor.name} has a poop accident<br><br>`;
-                } else {
-                    watcherPerspective += `"${this.actor.name} makes a surprised face. Then, for everyone to see, ${this.actor.name} pees himself, wetting his cloth.`;
-                    selfPerspective += `You feel warm around the waist and down your legs. You had an leaky accident!`;
-                    messageContentGM += `${this.actor.name} has a pee accident<br><br>`;
-                }
-            }
+            watcherPerspective+= this.infoMsg(type,subType);
+            messageContentGM += `${this.actor.name} got denied cummies<br><br>`;
+            // There are no accidents for denied, as there is no fluid
         } else {
-            console.log(`Macro | informAboutAccident encountered unknown type ${type}`)
-        }
-
-        let dcModBonus = Math.floor(sneakDcMod * Math.random());
-
-        let totalSneak = 1;
-        let totalUnawareness = selfAwarenessDifficultDcMod;
-        // TODO: Right implementation
-        if(false || !nighttime){
-            /*const res = await this.actor.rollSkill("dec", {rollMode: "gmroll", chatMessage: false});
-            if(res?.total) {
-                totalSneak = (res?.total ?? 0) + dcModBonus;
-            }
-            else {
-                totalSneak = dcModBonus;
-            }*/
-        }
-        else {
-            totalUnawareness -= 10;
+            console.error(`Macro | informAboutAccident encountered unknown type ${type}`)
         }
 
         const chatData = {
             user: this.actorUser.id,
             speaker: ChatMessage.getSpeaker(),
-            content: messageHeaderPC + " " + this.actor.name + " " + watcherPerspective
+            content: messageHeaderPC + watcherPerspective
         };
 
         ChatMessage.create(chatData, {});
-        //let excludeUsers = {}
-
-        //this.whisper(messageContentGM,true);
-        //excludeUsers[this.actorUser().id] = true;
-        //this.whisper(messageHeaderPCSelf + selfPerspective);
-        /*if(this.actor.system.skills.prc.passive >= totalUnawareness) {
-
-        }
-        else {
-            this.whisper(totalUnawareness + messageContentGM,true);
-        }*/
-
-        /*if(!nighttime) {
-            const passivs = this.getTokenPassivs();
-
-            for (let pc of passivs.pc) {
-                const pm = new PottyManager(pc.actor);
-
-                if (pc.passive >= totalSneak) {
-                    const uid = pm.actorUser().id;
-                    if (!excludeUsers[uid]) {
-                        pm.whisper(messageHeaderPC + " " + pc.actor.name + " " + watcherPerspective);
-                        excludeUsers[uid] = true;
-                    }
-                }
-            }
-        }*/
     }
-    causeAccident() {
-        this.actor.system.modifiers
-    }
-}
-class DiapersActorSFRG extends ActorSFRPG  {
-    constructor(e, t) {
-        super(e, t)
-    }
-
-
-
-
-
-
-
-    /*
-    getResource(type, subType) {
-        if (!type || !subType) {
-            return null;
-        }
-
-        const conditionItems = this.items.filter(x => x.type === "actorResource" && x.system.type === type && x.system.subType === subType);
-        if (conditionItems.length > 1) {
-            ui.notifications.warn(`Found multiple actorResources matching ${type}.${subType} on actor ${this.name}, returning the first one.`);
-        }
-        if(conditionItems.length <= 0) {
-            ui.notifications.warn(`Could not find actorResources matching ${type}.${subType} on actor ${this.name}.`);
-            return null;
-        }
-        const found = conditionItems[0];
-        if(type === "nanocyte" && subType === "stability"){
-            const nameGen = "Nanocyte Stability ("+ this.nanocyteBaseMass + ")";
-            if(found.name !== nameGen) {
-                found.update({
-                    "name": nameGen
-                });
-            }
-        }
-        return conditionItems[0];
-    }
-
-    getResourceBaseValue(type, subType) {
-        //if()
-        const actorResource = this.getResource(type, subType);
-        if (actorResource) {
-            return actorResource.system.base;
-        }
-        return null;
-    }
-    setResourceRange(type,subType,max){
-        const actorResource = this.getResource(type, subType);
-        actorResource.update({
-            "system.range.max": max
-        });
-    }
-    let ExistingDiaper = targetActor.items.getName("Diaper");
-    let targetItem = ExistingDiaper.contents.find(y => y.id = pee.id)
-    if(targetItem){
-        let newAmount = Number(targetItem.system.quantity) + 1;
-        await helper.updateItem(targetItem.id, {'quantity': newAmount });
-    }
-    else {
-    let addedItems = await targetActor.createEmbeddedDocuments('Item', [pee]);
-    let addedItem = addedItems[0];
-    const preferredStorageIndex = game.getFirstAcceptableStorageIndex(ExistingDiaper,addedItem);
-    await game.moveItemBetweenActorsAsync(helper,addedItem,helper,ExistingDiaper,1,preferredStorageIndex )
-
- */
-
 }

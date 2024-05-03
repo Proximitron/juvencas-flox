@@ -1,16 +1,34 @@
-import {ActorItemHelper, getFirstAcceptableStorageIndex, moveItemBetweenActorsAsync} from "../../../../systems/sfrpg/module/actor/actor-inventory-utils.js";
-
 import {containsItems, ActorHelper, NanocyteActorHelper, DiaperActorHelper, getChildItems} from "./diapers.js";
+import {openShop, openShopFromEvent, initializeNanoforge, makeShopLink} from "./browser.js";
+import {FixedActorSheetSFRPG,FixedActorSheetSFRPGCharacter} from "./actorSheetFix.js";
+import {ActorSheetSFRPGCharacter} from "../../../../systems/sfrpg/module/actor/sheet/character.js";
+
 Hooks.once('init', async function() {
-/*	game.sfrpg.entities.ItemSFRPG = Diapers;
-	game.sfrpg.documents.ItemSFRPG = Diapers;
-	CONFIG.Item.documentClass = Diapers;
+	//game.sfrpg.Actor.Sheet.Base = FixedActorSFRG;
+
+/*	game.sfrpg.entities.ItemSFRPG = ItemSFRPGWorkaround;
+	game.sfrpg.documents.ItemSFRPG = ItemSFRPGWorkaround;
+	CONFIG.Item.documentClass = ItemSFRPGWorkaround;
 */
 	console.log("Flox-Babyfur | [INIT] Overriding document classes START");
 	/*game.sfrpg.entities.ActorSFRPG = DiapersActorSFRG;
 	game.sfrpg.documents.ActorSFRPG = DiapersActorSFRG;
 	CONFIG.Actor.documentClass = DiapersActorSFRG;
 	*/
+
+	game.sfrpg.applications.ActorSheetSFRPG = FixedActorSheetSFRPG;
+	game.sfrpg.applications.ActorSheetSFRPGCharacter = FixedActorSheetSFRPGCharacter;
+	game.sfrpg.Actor.Sheet.Base = FixedActorSheetSFRPG;
+	game.sfrpg.Actor.Sheet.Character = FixedActorSheetSFRPGCharacter;
+	Actors.unregisterSheet("sfrpg", ActorSheetSFRPGCharacter)
+	Actors.registerSheet("sfrpg", FixedActorSheetSFRPGCharacter, {
+		types: ["character"],
+		makeDefault: !0
+	});
+
+
+
+	initializeNanoforge();
 	console.log("Flox-Babyfur | [INIT] Overriding document classes END");
 });
 
@@ -21,7 +39,13 @@ Hooks.once('ready', async function() {
 	game.containsItems = containsItems;
 	game.getChildItems = getChildItems;
 	*/
+	/*game.sfrpg.entities.ItemSFRPG = ItemSFRPGWorkaround;
+	game.sfrpg.documents.ItemSFRPG = ItemSFRPGWorkaround;
+	CONFIG.Item.documentClass = ItemSFRPGWorkaround;*/
 	game.ActorHelper = DiaperActorHelper;
+	game.shop = openShop;
+	game.makeShopLink = makeShopLink;
+	$(document).on('click', '.flox_open_shop', function (pass) { openShopFromEvent(pass); })
 });
 Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 	if(typeof data?.system?.currency?.upb !== "undefined"){
@@ -31,6 +55,12 @@ Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 	if(typeof data?.system?.currency?.credit !== "undefined"){
 		const helper = ActorHelper.byActor(actor);
 		helper.whisper("Credit update:<br>"+actor.system.currency.credit+" TO "+data.system.currency.credit);
+	}
+	if(typeof event?._hpDiffs !== "undefined"){
+		const helper = DiaperActorHelper.byActor(actor);
+		if(helper.peePottyTraining()){
+			helper.pottyCheck("damage",event._hpDiffs);
+		}
 	}
 });
 Hooks.on("updateActor", function(actor, data, event, affectedUid) {
