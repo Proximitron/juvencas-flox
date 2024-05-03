@@ -371,7 +371,7 @@ export class DiaperActorHelper extends ActorHelper {
         return this.actor.items.find(i => i.name === this.constructor.CUM_ALLOWED_POTTY_TRAINING)
     }
     get protectionLevel(){
-        if(this.diaper) return 3;
+        if(this.diaper) return 8;
         return 0;
     }
     get filledAmount() {
