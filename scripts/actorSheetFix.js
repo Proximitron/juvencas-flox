@@ -24,6 +24,7 @@ import {ActorSheetSFRPGCharacter} from "../../../../systems/sfrpg/module/actor/s
 import {NanocyteActorHelper} from "./diapers.js";
 import {makeShopLink} from "./browser.js";
 
+initializeRemoteInventory();
 export class FixedActorSheetSFRPG extends ActorSheetSFRPG {
     constructor(...e) {
         super(...e);
@@ -317,7 +318,6 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
                 }
             }
         } else {
-            initializeRemoteInventory();
             const e = {
                 target: s.toObject(),
                 source: {
