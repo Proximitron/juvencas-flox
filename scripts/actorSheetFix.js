@@ -6,7 +6,8 @@ import {
     ActorItemHelper,
     containsItems,
     getFirstAcceptableStorageIndex,
-    moveItemBetweenActorsAsync
+    moveItemBetweenActorsAsync,
+    initializeRemoteInventory
 } from "../../../../systems/sfrpg/module/actor/actor-inventory-utils.js";
 import {
     InputDialog
@@ -316,6 +317,7 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
                 }
             }
         } else {
+            initializeRemoteInventory();
             const e = {
                 target: s.toObject(),
                 source: {
