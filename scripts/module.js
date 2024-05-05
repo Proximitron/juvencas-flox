@@ -1,5 +1,5 @@
 import {containsItems, ActorHelper, NanocyteActorHelper, DiaperActorHelper, getChildItems} from "./diapers.js";
-import {openShop, openShopFromEvent, initializeNanoforge, makeShopLink} from "./browser.js";
+import {openShop, openShopFromEvent, makeShopLink, initializeShopSystem} from "./browser.js";
 import {FixedActorSheetSFRPG,FixedActorSheetSFRPGCharacter} from "./actorSheetFix.js";
 import {ActorSheetSFRPGCharacter} from "../../../../systems/sfrpg/module/actor/sheet/character.js";
 
@@ -28,7 +28,7 @@ Hooks.once('init', async function() {
 
 
 
-	initializeNanoforge();
+	initializeShopSystem();
 	console.log("Flox-Babyfur | [INIT] Overriding document classes END");
 });
 

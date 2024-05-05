@@ -2,25 +2,25 @@ import {DocumentBrowserSFRPG} from "../../../../systems/sfrpg/module/packs/docum
 import {betterPackLoader} from "./betterPackloader.js";
 
 
-export function initializeNanoforge() {
+export function initializeShopSystem() {
     const equipmentBrowser = getEquipmentBrowser();
     equipmentBrowser.initializeSettings(["equipment"]);
 }
-export function openShop(compendiums,priceModifier = 1.0, title ="Shop", type = "shop", allowReopen = false) {
+export function openShop(compendiums,priceModifier = 1.0, title="Shop", shopType = "shop", allowReopen = false) {
     const browser = getEquipmentBrowser();
     browser.forceReload = true;
     browser.options.compendiums = compendiums;
     browser.options.priceModifier = priceModifier;
     browser.options.title = title;
-    browser.options.type = type;
+    browser.options.shopType = shopType;
     browser.options.shopReopen = allowReopen;
     browser.render(true);
 }
-export function makeShopLink(actor, text, compendiums,priceModifier = 1.0, title ="Shop", type = "shop", allowReopen = false) {
+export function makeShopLink(actor, text, compendiums,priceModifier = 1.0, title ="Shop", shopType = "shop", allowReopen = false) {
     const compendiumsJson = JSON.stringify(compendiums);
     const reopenStr = allowReopen ? "true" : "false";
     const content = `${text}<button class="flox_open_shop" data-compendiums='${compendiumsJson}' data-price-modifier="${priceModifier}"
-      data-shop-type="${type}" data-shop-name="${title}"
+      data-shop-type="${shopType}" data-shop-name="${title}"
       data-shop-reopen="${reopenStr}">Open</button>`;
 
     const chatData = {

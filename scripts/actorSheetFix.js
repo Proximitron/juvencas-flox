@@ -167,21 +167,46 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
         "asi"
     ];
 
+
     async triggerBuy(item,data){
+        if (data.uuid === undefined || !data.uuid.startsWith('Compendium')) return;
         if(this.constructor.freeTypes.includes(item.type)) return;
 
-        //const compendiumName = this.getCompendiumName(item.flags.core.sourceId);
         const compendiums = JSON.stringify(data.compendiums);
 
-        let unit = "Credits";
-        let act = "Bought";
+        const t = {};
+
+        let act;
+        let cost;
         if(data.shopType === "nanoforge"){
-            unit = "UPBs";
             act = "Forged";
+
+            if(data.price > 0) {
+                t["system.currency.upb"] = this.actor.system.currency.upb - data.price;
+                cost = `${data.price} UPBs`;
+            }
+            else {
+                cost = `free`;
+            }
+        } else if(data.shopType === "free" || data.price === undefined || data.price <= 0){
+            act = "Got";
+            cost = `free`;
         }
+        else {
+            if(data.price > 0) {
+                act = "Bought";
+                t["system.currency.credit"] = this.actor.system.currency.credit - data.price;
+                cost = `${data.price} Credits`;
+            }
+            else {
+                act = "Got";
+                cost = `free`;
+            }
+        }
+        this.actor.update(t);
 
         if(data.shopReopen === "true") {
-            makeShopLink(this.actor,`${act} ${item.name} for ${data.price} ${unit}`,compendiums,data.priceModifier,data.shopName,data.shopType,data.shopReopen === "true");
+            makeShopLink(this.actor,`${act} ${item.name} for ${cost}`,compendiums,data.priceModifier,data.shopName,data.shopType,data.shopReopen === "true");
         }
         else {
             const chatData = {
@@ -198,9 +223,8 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
         // Split the full item name by the dot character
         const parts = fullItemName.split('.');
 
-        if (parts[0] !== 'Compendium') {
-            throw Error(`Full item name '${fullItemName}' doesn't start with 'Compendium'`);
-        }
+        if (parts[0] !== 'Compendium') return undefined
+
         // Assuming the compendium name always starts from the second part and ends before the last two parts
         // We join the middle parts which represent the compendium name
         return parts.slice(1, parts.length - 2).join('.');

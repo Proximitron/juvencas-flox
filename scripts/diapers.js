@@ -360,7 +360,7 @@ export class DiaperActorHelper extends ActorHelper {
         return false;
     }
     get poopPottyTraining() {
-        return this.actor.items.find(i => i.name === this.constructor.POOP_ALLOWED_POTTY_TRAINING)
+        return this.actor.items.find(i => i.name === this.constructor.POO_ALLOWED_POTTY_TRAINING)
     }
     requireCumPottyTraining(){
         if(this.cumPottyTraining) return true;
@@ -395,7 +395,7 @@ export class DiaperActorHelper extends ActorHelper {
         const poopAccidentChancePercent = 20;
         const peeAccidentChancePercent = 60;
         const rand = Math.random() * 100.0;
-
+        console.log(`Potty check at ${rand}`)
 
         let poopCaseType = accidentType;
         if(this.poopPottyTraining){
@@ -448,8 +448,8 @@ export class DiaperActorHelper extends ActorHelper {
 
     static informsMsg = {
         concentrating: {
-            normal: ["{name} was concentrating really hard on what they are doing.","{name} got a bit distracted.","Momentarily distracted {name} forgot something..."],
-            dream: ["Deep in a slumber."]
+            normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
+            dream: ["Deep in a slumber.","While sleeping."]
         },
         [DiaperActorHelper.PEE]: {
             normal: ["{name} pauses their adventure, looking 🌧 momentarily puzzled 🌧, but then continues with a contented grin.",
@@ -498,7 +498,7 @@ export class DiaperActorHelper extends ActorHelper {
 
     infoMsg(type,subType){
         let key = this.constructor.informsMsg[type][subType];
-        if(key === "undefined"){
+        if(key === undefined){
             key = this.constructor.informsMsg[type]["normal"];
         }
         return getRandomValue(key).formatUnicorn({"name" : this.actor.name})
