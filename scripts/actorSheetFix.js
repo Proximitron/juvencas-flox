@@ -191,6 +191,7 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
         } else if(data.shopType === "free" || data.price === undefined || data.price <= 0){
             act = "Got";
             cost = `free`;
+            return; // Don't display buying for free for now
         }
         else {
             if(data.price > 0) {
@@ -205,14 +206,15 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
         }
         this.actor.update(t);
 
+        const finalText = `${act} ${item.name} for ${cost}`;
         if(data.shopReopen === "true") {
-            makeShopLink(this.actor,`${act} ${item.name} for ${cost}`,compendiums,data.priceModifier,data.shopName,data.shopType,data.shopReopen === "true");
+            makeShopLink(this.actor,finalText,compendiums,data.priceModifier,data.shopName,data.shopType,data.shopReopen === "true");
         }
         else {
             const chatData = {
                 user: this.actor.id,
                 speaker: ChatMessage.getSpeaker(),
-                content: `${act} ${item.name} for ${data.price} ${unit}`
+                content: finalText
             };
 
             ChatMessage.create(chatData, {});

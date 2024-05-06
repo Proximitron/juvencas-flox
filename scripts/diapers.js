@@ -88,9 +88,12 @@ export class ActorHelper extends ActorItemHelper {
         if(!found) {
             const addedItems = await this.actor.createEmbeddedDocuments('Item', [item]);
             found = addedItems[0];
-            const preferredStorageIndex = getFirstAcceptableStorageIndex(target,found);
-            moveItemBetweenActorsAsync(this.actorHelper,found,this.actorHelper,target,1,preferredStorageIndex )
             amount -= 1;
+            try {
+                const preferredStorageIndex = getFirstAcceptableStorageIndex(target,found);
+                moveItemBetweenActorsAsync(this.actorHelper,found,this.actorHelper,target,1,preferredStorageIndex)
+            }
+            catch (e) {}
         }
         if(amount > 0) {
             let newAmount = Number(found.system.quantity) + amount;
@@ -117,6 +120,15 @@ export class ActorHelper extends ActorItemHelper {
     }
     get unconscious(){
         return this?.actor?.system?.conditions?.unconscious === true;
+    }
+
+    getActorResource(type,subType){
+        const conditionItems = this.actor.items.filter(x => x.type === "actorResource" && x.system.type === type && x.system.subType === subType);
+        if (conditionItems.length > 1) {
+            console.log(`Found multiple actorResources matching ${type}.${subType} on actor ${this.name}, returning the first one.`);
+        }
+        if(conditionItems.length <= 0) return undefined;
+        return conditionItems[0];
     }
     message(targets, message, gmonly = false) {
         const gmList = game.users.filter((u) => u.isGM && u.id !== this.actorUser.id).map((u) => u.id);
@@ -203,10 +215,7 @@ export class NanocyteActorHelper extends ActorHelper  {
 
         // Stability calc START
         let subType = "stability";
-        const conditionItems = this.actor.items.filter(x => x.type === "actorResource" && x.system.type === type && x.system.subType === subType);
-        if (conditionItems.length > 1) {
-            console.log(`Found multiple actorResources matching ${type}.${subType} on actor ${this.name}, returning the first one.`);
-        }
+        const conditionItems = this.getActorResource(type,subType);
         if(conditionItems.length <= 0) return;
 
         let found = conditionItems[0];
@@ -337,13 +346,60 @@ export class DiaperActorHelper extends ActorHelper {
         return await this.itemPack.getDocument(this.constructor.items[name]);
     }
     static byActor(actor){
-        const tokens = actor.getActiveTokens();
+        let tokens = undefined;
+        if(actor.getActiveTokens !== undefined) tokens = actor.getActiveTokens();
         let tokenId = undefined;
-        if(tokens.length > 0) tokenId = tokens[0].id;
+        if(tokens !== undefined && tokens.length > 0) tokenId = tokens[0].id;
         return new DiaperActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
     get diaper() {
         return this.actor.items.find(dp => dp.name === "Diaper" && dp.system.equipped);
+    }
+    static fluids(targetList) {
+        return targetList.filter(dp => dp.name === DiaperActorHelper.PEE || dp.name === DiaperActorHelper.POO
+            || dp.name === DiaperActorHelper.CUM || dp.name === DiaperActorHelper.WATER);
+    }
+    static fluidAmount(targetList){
+        return DiaperActorHelper.amount(DiaperActorHelper.fluids(targetList))
+    }
+    static amount(targetList){
+        let amount = 0;
+        targetList.forEach(item => amount += Number(item.system.quantity));
+        return amount;
+    }
+    updateDiaperStateResources() {
+        const set = {};
+
+        const type = "diaper"
+        let updates = {};
+
+        //DiaperActorHelper.fluidAmount(this.diaper.contents)
+
+        // Capacity calc START
+        let subType = "capacity";
+        const conditionItem = this.getActorResource(type,subType);
+        if(conditionItem !== undefined) {
+            let diaperCapacity = 0;
+            if(this.diaper){
+                diaperCapacity = 8;
+            }
+            let found = conditionItem;
+            const nameGen = "Diaper Capacity (" + nFormatter(this.filledAmount, 0) + "/" + nFormatter(diaperCapacity, 0) + ")";
+
+            if (found.name !== nameGen) {
+                updates["name"] = nameGen;
+            }
+
+            const oldBaseVal = found.system.base;
+            if (oldBaseVal !== diaperCapacity) {
+                updates["system.base"] = diaperCapacity;
+            }
+
+            if (Object.keys(updates).length > 0) {
+                found.update(updates);
+            }
+        }
+        // Capacity calc END
     }
     requirePeePottyTraining(){
         if(this.peePottyTraining) return true;
@@ -374,18 +430,15 @@ export class DiaperActorHelper extends ActorHelper {
         if(this.diaper) return 8;
         return 0;
     }
+
     get filledAmount() {
         let amount = 0;
         if(this.diaper){
-            this.diaper.contents.forEach(item => amount += Number(item.system.quantity));
+            amount = DiaperActorHelper.fluidAmount(this.diaper.contents);
         }
         return amount;
     }
-    // TODO: Real state
 
-    get diaperState() {
-
-    }
     checkModifierImpact(modifiers){
         const found = modifiers.filter(m => m.enabled && m.item && this.constructor.trainings[m.item.name] !== undefined);
         found.forEach(m => this.rollPottyCheck(m.item));

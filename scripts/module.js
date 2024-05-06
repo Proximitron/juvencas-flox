@@ -47,13 +47,18 @@ Hooks.once('ready', async function() {
 	game.makeShopLink = makeShopLink;
 	$(document).on('click', '.flox_open_shop', function (pass) { openShopFromEvent(pass); })
 });
+
+Hooks.on("afterItemsProcessed", function(actor){
+	const helper = DiaperActorHelper.byActor(actor.actor);
+	helper.updateDiaperStateResources();
+});
 Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 	if(typeof data?.system?.currency?.upb !== "undefined"){
-		const helper = ActorHelper.byActor(actor);
+		const helper = DiaperActorHelper.byActor(actor);
 		helper.whisper("UPB update:<br>"+actor.system.currency.upb+" TO "+data.system.currency.upb);
 	}
 	if(typeof data?.system?.currency?.credit !== "undefined"){
-		const helper = ActorHelper.byActor(actor);
+		const helper = DiaperActorHelper.byActor(actor);
 		helper.whisper("Credit update:<br>"+actor.system.currency.credit+" TO "+data.system.currency.credit);
 	}
 	if(typeof event?._hpDiffs !== "undefined"){
