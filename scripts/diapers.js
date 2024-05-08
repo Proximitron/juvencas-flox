@@ -84,7 +84,7 @@ export class ActorHelper extends ActorItemHelper {
         if(target?.contents !== undefined){
             actElement = target.contents;
         }
-        let found = actElement.find(i => i.name === item.name);
+        let found = actElement.find(i => i.name === item.name && (i.parentItem === undefined || i.parentItem === target));
         if(!found) {
             const addedItems = await this.actor.createEmbeddedDocuments('Item', [item]);
             found = addedItems[0];
@@ -130,6 +130,13 @@ export class ActorHelper extends ActorItemHelper {
         if(conditionItems.length <= 0) return undefined;
         return conditionItems[0];
     }
+    getActorResourceInstance(type,subType){
+        const resourceList =  this.actor?.system?.resources;
+        if(resourceList === undefined) return undefined;
+        if(resourceList[type] === undefined) return undefined;
+        return resourceList[type][subType];
+    }
+
     message(targets, message, gmonly = false) {
         const gmList = game.users.filter((u) => u.isGM && u.id !== this.actorUser.id).map((u) => u.id);
         if (gmonly) {
@@ -310,9 +317,10 @@ export class DiaperActorHelper extends ActorHelper {
     static CUM = "Cum";
     static WATER = "Water";
 
-    static DEFAULT_POTTY_TRAINING = "Accident Prone";
     static POO_ALLOWED_POTTY_TRAINING = "Stinky";
     static CUM_ALLOWED_POTTY_TRAINING = "Naughty";
+
+    static DIAPER_STATE_KEY = "diaper.state";
 
     static CUM_PREVENTION = "Caged";
 
@@ -325,18 +333,12 @@ export class DiaperActorHelper extends ActorHelper {
         [DiaperActorHelper.CUM]: "4tLWbPTmzDnxOC8X",
         [DiaperActorHelper.WATER]: "I6sgq423yMtlp4cg",
 
-        // Trainings
-        [DiaperActorHelper.DEFAULT_POTTY_TRAINING]: "WlhdAgu4flhYP4hX",
+        // Additional Trainings
         [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: "7ptWGtpU7hnLoIHf",
         [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: "4UO4QD4eje9LFXYQ",
 
         // Buffs/Debuffs
         [DiaperActorHelper.DIRTY_CLOTH]: "a5WzbEPn0gyEO3AM",
-    }
-    static trainings = {
-        [DiaperActorHelper.DEFAULT_POTTY_TRAINING]: DiaperActorHelper.PEE,
-        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: DiaperActorHelper.POO,
-        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: DiaperActorHelper.CUM
     }
 
     async item(name) {
@@ -352,63 +354,167 @@ export class DiaperActorHelper extends ActorHelper {
         if(tokens !== undefined && tokens.length > 0) tokenId = tokens[0].id;
         return new DiaperActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
-    get diaper() {
-        return this.actor.items.find(dp => dp.name === "Diaper" && dp.system.equipped);
+    static getItemCapacity(item){
+        let capacity = 0;
+        item.system.modifiers.forEach(mod => {
+            if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === "diaper.capacity"){
+                capacity = mod.max;
+            }
+        });
+        return capacity;
     }
-    static fluids(targetList) {
-        return targetList.filter(dp => dp.name === DiaperActorHelper.PEE || dp.name === DiaperActorHelper.POO
+
+    static canWetTypes = [
+        "container",
+        "equipment",
+        "goods",
+        "hybrid",
+        "magic",
+        "shield",
+        "technological"
+    ];
+    get wetableCloth(){
+        const items = [];
+        this.actor.system.allModifiers.forEach(mod => {
+           if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === "diaper.capacity"){
+               if(DiaperActorHelper.canWetTypes.includes(mod.item.type)) {
+                   items.push({"item": mod.item, "max": mod.max});
+               }
+           }
+        });
+        items.sort((a, b) => b.max - a.max); // high first
+        return items;
+    }
+    async wetCloth(itemName,toAdd, target){
+        if(target.max === undefined){
+            target = {"item": target, "max": DiaperActorHelper.getItemCapacity(target)};
+        }
+        const diff = target.max - DiaperActorHelper.fluidAmount(target);
+        if(diff > 0){
+            const reallyToAdd = Math.min(diff,toAdd);
+            await this.addItem(itemName, reallyToAdd, target.item);
+
+            return toAdd-reallyToAdd;
+        }
+
+        return toAdd;
+    }
+    static fluids(target) {
+        if(target.filter === undefined) target = DiaperActorHelper.targetToContentList(target);
+        return target.filter(dp => dp.name === DiaperActorHelper.PEE || dp.name === DiaperActorHelper.POO
             || dp.name === DiaperActorHelper.CUM || dp.name === DiaperActorHelper.WATER);
     }
-    static fluidAmount(targetList){
-        return DiaperActorHelper.amount(DiaperActorHelper.fluids(targetList))
+    static fluidAmount(target){
+        return DiaperActorHelper.amount(DiaperActorHelper.fluids(target))
     }
-    static amount(targetList){
+    static targetToContentList(target){
+        let targetList = [];
+        if(target?.item !== undefined) target = target.item;
+        if(target?.contents !== undefined) targetList = target.contents;
+        else if (target?.items !== undefined) targetList = target.items;
+        return targetList;
+    }
+    static amount(target){
+        if(target.forEach === undefined) target = DiaperActorHelper.targetToContentList(target);
         let amount = 0;
-        targetList.forEach(item => amount += Number(item.system.quantity));
+        target.forEach(item => amount += Number(item.system.quantity));
         return amount;
     }
     updateDiaperStateResources() {
-        const set = {};
-
         const type = "diaper"
-        let updates = {};
 
-        //DiaperActorHelper.fluidAmount(this.diaper.contents)
+        // Diaper Capacity calc START
+        const diaperCapacityUpdates = {};
+        const diaperCapacityStr = "capacity";
+        const dpCapacity = this.getActorResource(type,diaperCapacityStr);
 
-        // Capacity calc START
-        let subType = "capacity";
-        const conditionItem = this.getActorResource(type,subType);
-        if(conditionItem !== undefined) {
-            let diaperCapacity = 0;
-            if(this.diaper){
-                diaperCapacity = 8;
+        if(dpCapacity !== undefined){
+            const diaperCapacityNameGen = "Diaper Capacity (" + nFormatter(this.allFluidsCount, 0) + "/" + nFormatter(this.protectionLevel, 0) + ")";
+            if(dpCapacity.name !== diaperCapacityNameGen){
+                diaperCapacityUpdates["name"] = diaperCapacityNameGen;
             }
-            let found = conditionItem;
-            const nameGen = "Diaper Capacity (" + nFormatter(this.filledAmount, 0) + "/" + nFormatter(diaperCapacity, 0) + ")";
-
-            if (found.name !== nameGen) {
-                updates["name"] = nameGen;
-            }
-
-            const oldBaseVal = found.system.base;
-            if (oldBaseVal !== diaperCapacity) {
-                updates["system.base"] = diaperCapacity;
-            }
-
-            if (Object.keys(updates).length > 0) {
-                found.update(updates);
+            if (Object.keys(diaperCapacityUpdates).length > 0) {
+                dpCapacity.update(diaperCapacityUpdates);
             }
         }
-        // Capacity calc END
+        // Diaper Capacity calc END
+
+        // Diaper State calc END
+        const diaperStateUpdates = {};
+        const diaperStateStr = "state";
+        const dpState = this.getActorResource(type,diaperStateStr);
+        if(dpState !== undefined) {
+            const diaperStateCombTrack = this.getCombatTrackerData(dpState);
+            const diaperStateNameGen = "Diaper State (" + diaperStateCombTrack.title + ")";
+            if (dpState.name !== diaperStateNameGen) {
+                diaperStateUpdates["name"] = diaperStateNameGen;
+                diaperStateUpdates["img"] = diaperStateCombTrack.image;
+            }
+
+            let diaperCapacityPercent = this.allFluidsCount / this.protectionLevel;
+
+            const diaperCapacity = Math.floor(100 - (diaperCapacityPercent * 100));
+            const oldBaseVal = dpState.system.base;
+            if (oldBaseVal !== diaperCapacity) {
+                diaperStateUpdates["system.base"] = diaperCapacity;
+            }
+
+            if (Object.keys(diaperStateUpdates).length > 0) {
+                dpState.update(diaperStateUpdates);
+            }
+        }
+        // Diaper State calc END
     }
-    requirePeePottyTraining(){
-        if(this.peePottyTraining) return true;
+
+    getCombatTrackerData(resource){
+        const o = this.actor.getResourceComputedValue(resource.system.type, resource.system.subType);
+        let s = ""
+            , c = resource.img
+            , i = o;
+        if (resource.system.combatTracker.displayAbsoluteValue && (i = Math.abs(i)),
+            resource.system.combatTracker.visualization)
+            for (const e of resource.system.combatTracker.visualization)
+                switch (e.mode) {
+                    case "eq":
+                        o === e.value && (s = e.title || s,
+                            c = e.image || c);
+                        break;
+                    case "neq":
+                        o !== e.value && (s = e.title || s,
+                            c = e.image || c);
+                        break;
+                    case "gt":
+                        o > e.value && (s = e.title || s,
+                            c = e.image || c);
+                        break;
+                    case "gte":
+                        o >= e.value && (s = e.title || s,
+                            c = e.image || c);
+                        break;
+                    case "lt":
+                        o < e.value && (s = e.title || s,
+                            c = e.image || c);
+                        break;
+                    case "lte":
+                        o <= e.value && (s = e.title || s,
+                            c = e.image || c)
+                }
+        return { title: s, image: c };
+    }
+
+    static scaleValue(x, upperLimit, lowerLimit) {
+        const slope = 200 / (lowerLimit - upperLimit);
+        const intercept = 100 - slope * upperLimit;
+        return slope * x + intercept;
+    }
+    requirePottyTraining(){
+        if(this.pottyTraining) return true;
         console.log("Macro | " + this.actor.name + " is not able to have pee accidents!");
         return false;
     }
 
-    get peePottyTraining() {
-        return this.actor.items.find(i => i.name === this.constructor.DEFAULT_POTTY_TRAINING)
+    get pottyTraining() {
+        return this.actor.items.find(i => i.type === "actorResource" && this.constructor.actorResourceToName(i) === this.constructor.DIAPER_STATE_KEY);
     }
     requirePoopPottyTraining(){
         if(this.poopPottyTraining) return true;
@@ -427,79 +533,123 @@ export class DiaperActorHelper extends ActorHelper {
         return this.actor.items.find(i => i.name === this.constructor.CUM_ALLOWED_POTTY_TRAINING)
     }
     get protectionLevel(){
-        if(this.diaper) return 8;
+        const capacity = this.getActorResourceInstance("diaper","capacity");
+        if(capacity?.value !== undefined) return capacity.value;
         return 0;
     }
+    accidentAllowed(type){
+        if(type === this.constructor.PEE) return !!this.pottyTraining;
+        if(type === this.constructor.POO) return !!this.poopPottyTraining;
+        if(type === this.constructor.CUM) return !!this.cumPottyTraining;
+        if(type === this.constructor.WATER) return !!this.cumPottyTraining;
+        throw Error("Accident Type unknown: " + type);
+    }
 
-    get filledAmount() {
-        let amount = 0;
-        if(this.diaper){
-            amount = DiaperActorHelper.fluidAmount(this.diaper.contents);
-        }
-        return amount;
+    get allFluidsCount() {
+        return DiaperActorHelper.fluidAmount(this.actor);
     }
 
     checkModifierImpact(modifiers){
-        const found = modifiers.filter(m => m.enabled && m.item && this.constructor.trainings[m.item.name] !== undefined);
-        found.forEach(m => this.rollPottyCheck(m.item));
+        const found = modifiers.filter(m => m.enabled && m.item && this.constructor.sourceToItemName(m) === DiaperActorHelper.DIAPER_STATE_KEY);
+        found.forEach(m => this.rollPottyCheck(m));
     }
-    rollPottyCheck(source){
-        let accidentType = this.constructor.trainings[source.name];
-        const poopAccidentChancePercent = 20;
-        const peeAccidentChancePercent = 60;
-        const rand = Math.random() * 100.0;
-        console.log(`Potty check at ${rand}`)
-
-        let poopCaseType = accidentType;
-        if(this.poopPottyTraining){
-            poopCaseType = this.constructor.trainings[DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING];
+    static sourceToName(source){
+        if(source.name) {
+            return source.name;
         }
-
-        if(rand < (poopAccidentChancePercent / 2)){
-            this.accidentManager(poopCaseType, poopCaseType === accidentType ? 3 : 2);
+        else {
+            return source;
         }
-        else if(rand < poopAccidentChancePercent){
-            this.accidentManager(poopCaseType,poopCaseType === accidentType ? 2 : 1);
+    }
+    static accidentResults = {
+        [DiaperActorHelper.DIAPER_STATE_KEY]: {[DiaperActorHelper.PEE]: 70,[DiaperActorHelper.POO]: 40},
+        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.POO]: 100},
+        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.CUM]: 100}
+    }
+    static actorResourceToName(resource){
+        if(resource.type !== "actorResource") {
+            console.log(resource);
+            throw Error("Not an actorResource");
         }
-        else if(rand < peeAccidentChancePercent / 2){
-            this.accidentManager(accidentType,2);
+        return `${resource.system.type}.${resource.system.subType}`;
+    }
+    static sourceToItemName(source){
+        if(source.item?.type === "actorResource"){
+            return DiaperActorHelper.actorResourceToName(source.item);
         }
-        else if(rand < peeAccidentChancePercent){
-            this.accidentManager(accidentType,1);
+        else if(source.item?.name !== undefined) {
+            return source.item?.name;
         }
-        else return;
-
+        else if(source.name) {
+            return source.name;
+        }
+        else {
+            return source;
+        }
+    }
+    rollPottyCheck(source,effectAmount = 1){
+        const sourceName = DiaperActorHelper.sourceToItemName(source);
+        console.log(`Potty check for ${sourceName}`)
+        let accidentMap;
+        if(DiaperActorHelper.accidentResults[sourceName]){
+            accidentMap = DiaperActorHelper.accidentResults[sourceName];
+            console.log("Found AccidentMap for "+sourceName);
+        }
+        else {
+            accidentMap = DiaperActorHelper.accidentResults[DiaperActorHelper.DIAPER_STATE_KEY];
+            console.log("Selecting default AccidentMap for "+sourceName);
+        }
+        for (const [accidentType, accidentChance] of Object.entries(accidentMap)) {
+            if( (Math.random() * 100.0) >= accidentChance){
+                if(this.accidentAllowed(accidentType)){
+                    this.accidentManager(accidentType,effectAmount * 2, undefined, source);
+                }
+                else if(this.accidentAllowed(DiaperActorHelper.PEE)){
+                    this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                }
+                else if(this.accidentAllowed(DiaperActorHelper.WATER)){
+                    this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                }
+                else {
+                    throw Error("No valid accident type found for "+ this.actor.name);
+                }
+            }
+        }
     }
 
     get isConscious(){
         return true;
     }
-    async accidentManager(itemName, amount, subType = undefined) {
+    async accidentManager(itemName, amount, subType = undefined, source) {
         if(subType === undefined) subType = this.isConscious ? "normal" : "dream";
         if (amount > 0) {
-            if(this.protectionLevel > this.filledAmount) {
-                const toAdd = Math.min(this.protectionLevel-this.filledAmount,amount);
-                amount -= toAdd;
-                await this.addItem(itemName, toAdd, this.diaper);
+            /*if(this.protectionLevel > this.diaperFluidsCount) {
+                const toAdd = Math.min(this.protectionLevel-this.diaperFluidsCount,amount);
+                amount -= toAdd;*/
+
+            for (const itm of this.wetableCloth) {
+                amount = await this.wetCloth(itemName, amount, itm);
                 if(amount <= 0) {
-                    this.informAboutAccident(itemName,subType);
+                    this.informAboutAccident(itemName,subType, source);
+                    return;
                 }
             }
+
             if(amount > 0){
-                const foundList = await this.getItems(this.constructor.DIRTY_CLOTH,this.actor);
-                if(foundList.length <= 0) {
-                    this.addItem(this.constructor.DIRTY_CLOTH, 1, this.actor);
-                }
-                this.informAboutAccident(itemName,"accident");
+                this.addItem(itemName, amount);
+                this.informAboutAccident(itemName,"accident", source);
             }
-            if(amount > 0) {
+            /*if(amount > 0) {
                 console.log(`Macro | wetManager failed to execute request. ${amount} left in request.`);
-            }
+            }*/
         }
         return false;
     }
 
     static informsMsg = {
+        "diaper.state": {
+            normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"]
+        },
         concentrating: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
             dream: ["Deep in a slumber.","While sleeping."]
@@ -556,16 +706,20 @@ export class DiaperActorHelper extends ActorHelper {
         }
         return getRandomValue(key).formatUnicorn({"name" : this.actor.name})
     }
-    async informAboutAccident(type,subType,reason = "concentrating") {
+    async informAboutAccident(type,subType,source = "concentrating") {
         console.log(`Macro | ${this.actor.name} had an ${type}-Accident of ${type}`);
 
+        const sourceName = this.constructor.sourceToName(source);
+
+        let watcherPerspective = `${this.actor.name} uses ${sourceName}.`;
+        const reason = "concentrating"
         const messageHeaderPC = "<b>Uh-Oh!</b><br>";
         const messageHeaderGM = "<b>Accident Report</b><br>";
         let messageContentGM = "";
 
         let sneakDcMod = 0;
         let selfAwarenessDifficultDcMod = 10;
-        let watcherPerspective = this.infoMsg(reason,subType);
+       // watcherPerspective += this.infoMsg(reason,subType);
         const accident = subType === "accident"
 
         if (type === this.constructor.PEE) {
@@ -576,7 +730,7 @@ export class DiaperActorHelper extends ActorHelper {
                 messageContentGM += `${this.actor.name} had a major pee accident!<br><br>`;
             }
 
-        } else if (type === this.constructor.POOP) {
+        } else if (type === this.constructor.POO) {
             messageContentGM += `${this.actor.name} pooped himself<br><br>`;
             watcherPerspective+= this.infoMsg(type,subType);
 

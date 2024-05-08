@@ -26,8 +26,6 @@ Hooks.once('init', async function() {
 		makeDefault: !0
 	});
 
-
-
 	initializeShopSystem();
 	console.log("Flox-Babyfur | [INIT] Overriding document classes END");
 });
@@ -63,8 +61,8 @@ Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 	}
 	if(typeof event?._hpDiffs !== "undefined"){
 		const helper = DiaperActorHelper.byActor(actor);
-		if(helper.peePottyTraining()){
-			helper.pottyCheck("damage",event._hpDiffs);
+		if(helper.pottyTraining){
+			helper.rollPottyCheck("damage",event._hpDiffs);
 		}
 	}
 });
@@ -79,6 +77,10 @@ Hooks.on("updateItem", function(item, data, event, affectedUid) {
 	if(item?.system?.type === "nanocyte"){
 		const helper = NanocyteActorHelper.byActor(item.actor);
 		helper.updateNanocyteResources();
+	}
+	else if(item?.system?.type === "diaper"){
+		const helper = DiaperActorHelper.byActor(item.actor);
+		helper.updateDiaperStateResources();
 	}
 });
 
