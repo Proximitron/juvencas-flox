@@ -479,10 +479,17 @@ export class DiaperActorHelper extends ActorHelper {
                 diaperStateUpdates["img"] = diaperStateCombTrack.image;
             }
 
-            let diaperCapacityPercent = diaperWetness / diaperProtection;
-
+            let diaperCapacityPercent = 1;
+            if(diaperProtection > 0){
+                diaperCapacityPercent = diaperWetness / diaperProtection;
+            }
             if(diaperCapacityPercent >= 1){
-                diaperCapacityPercent = ((clothWetness / clothProtection)/2) + diaperCapacityPercent;
+                if(clothProtection > 0) {
+                    diaperCapacityPercent = ((clothWetness / clothProtection) / 2) + diaperCapacityPercent;
+                }
+                else if(allFluids > 0){
+                    diaperCapacityPercent = 2;
+                }
             }
 
             const diaperCapacity = Math.floor(100 - (diaperCapacityPercent * 100));
@@ -595,7 +602,7 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     static accidentResults = {
-        [DiaperActorHelper.DIAPER_STATE_KEY]: {[DiaperActorHelper.PEE]: 70,[DiaperActorHelper.POO]: 40},
+        [DiaperActorHelper.DIAPER_STATE_KEY]: {[DiaperActorHelper.PEE]: 50,[DiaperActorHelper.POO]: 20},
         [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.POO]: 100},
         [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.CUM]: 100}
     }
@@ -744,7 +751,7 @@ export class DiaperActorHelper extends ActorHelper {
 
         const sourceName = this.constructor.sourceToName(source);
 
-        let watcherPerspective = `${this.actor.name} uses ${sourceName}.`;
+        let watcherPerspective = `${this.actor.name} uses "${sourceName}". `;
         const reason = "concentrating"
         const messageHeaderPC = "<b>Uh-Oh!</b><br>";
         const messageHeaderGM = "<b>Accident Report</b><br>";
