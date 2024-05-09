@@ -320,7 +320,8 @@ export class DiaperActorHelper extends ActorHelper {
     static POO_ALLOWED_POTTY_TRAINING = "Stinky";
     static CUM_ALLOWED_POTTY_TRAINING = "Naughty";
 
-    static DIAPER_STATE_KEY = "diaper.state";
+    static DIAPER_STATE_KEY = "protection.state";
+    static DIAPER_CAPACITY_KEY = "protection.capacity";
 
     static CUM_PREVENTION = "Caged";
 
@@ -357,7 +358,7 @@ export class DiaperActorHelper extends ActorHelper {
     static getItemCapacity(item){
         let capacity = 0;
         item.system.modifiers.forEach(mod => {
-            if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === "diaper.capacity"){
+            if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === DiaperActorHelper.DIAPER_CAPACITY_KEY){
                 capacity = mod.max;
             }
         });
@@ -376,14 +377,31 @@ export class DiaperActorHelper extends ActorHelper {
     get wetableCloth(){
         const items = [];
         this.actor.system.allModifiers.forEach(mod => {
-           if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === "diaper.capacity"){
+           if(mod.enabled && mod.effectType === "actor-resource" && mod.valueAffected === DiaperActorHelper.DIAPER_CAPACITY_KEY){
                if(DiaperActorHelper.canWetTypes.includes(mod.item.type)) {
-                   items.push({"item": mod.item, "max": mod.max});
+                   if(mod.item.parent === this.actor) {
+                       items.push({"item": mod.item, "max": mod.max});
+                   }
                }
            }
         });
         items.sort((a, b) => b.max - a.max); // high first
         return items;
+    }
+    get diaper(){
+        const clothing = this.wetableCloth;
+        if(!clothing[0]) return undefined;
+        return clothing[0].item;
+    }
+    get diaperProtectionLevel(){
+        const clothing = this.wetableCloth;
+        if(!clothing[0]) return 0;
+        return clothing[0].max;
+    }
+    get diaperWetness(){
+        const diaper = this.diaper;
+        if(!diaper) return 0;
+        return this.constructor.fluidAmount(diaper);
     }
     async wetCloth(itemName,toAdd, target){
         if(target.max === undefined){
@@ -398,6 +416,10 @@ export class DiaperActorHelper extends ActorHelper {
         }
 
         return toAdd;
+    }
+    static protection(target){
+        if(target.filter === undefined) target = DiaperActorHelper.targetToContentList(target);
+
     }
     static fluids(target) {
         if(target.filter === undefined) target = DiaperActorHelper.targetToContentList(target);
@@ -421,15 +443,21 @@ export class DiaperActorHelper extends ActorHelper {
         return amount;
     }
     updateDiaperStateResources() {
-        const type = "diaper"
+        const diaperWetness = this.diaperWetness;
+        const diaperProtection = this.diaperProtectionLevel;
+        const allFluids = this.allFluidsCount;
+        const allProtection = this.protectionLevel;
+        const clothWetness = allFluids - diaperWetness;
+        const clothProtection = allProtection - diaperProtection;
 
         // Diaper Capacity calc START
         const diaperCapacityUpdates = {};
-        const diaperCapacityStr = "capacity";
-        const dpCapacity = this.getActorResource(type,diaperCapacityStr);
+
+        const [diaperTypeStr, diaperCapacityStr] = DiaperActorHelper.DIAPER_CAPACITY_KEY.split(".");
+        const dpCapacity = this.getActorResource(diaperTypeStr,diaperCapacityStr);
 
         if(dpCapacity !== undefined){
-            const diaperCapacityNameGen = "Diaper Capacity (" + nFormatter(this.allFluidsCount, 0) + "/" + nFormatter(this.protectionLevel, 0) + ")";
+            const diaperCapacityNameGen = `Protection Capacity (Diaper: ${diaperWetness}/${diaperProtection}, Cloth: ${clothWetness}/${clothProtection})`;
             if(dpCapacity.name !== diaperCapacityNameGen){
                 diaperCapacityUpdates["name"] = diaperCapacityNameGen;
             }
@@ -441,17 +469,21 @@ export class DiaperActorHelper extends ActorHelper {
 
         // Diaper State calc END
         const diaperStateUpdates = {};
-        const diaperStateStr = "state";
-        const dpState = this.getActorResource(type,diaperStateStr);
+        const [diaperStateTypeStr, diaperStateStr] = DiaperActorHelper.DIAPER_STATE_KEY.split(".");
+        const dpState = this.getActorResource(diaperStateTypeStr,diaperStateStr);
         if(dpState !== undefined) {
             const diaperStateCombTrack = this.getCombatTrackerData(dpState);
-            const diaperStateNameGen = "Diaper State (" + diaperStateCombTrack.title + ")";
+            const diaperStateNameGen = "Protection State (" + diaperStateCombTrack.title + ")";
             if (dpState.name !== diaperStateNameGen) {
                 diaperStateUpdates["name"] = diaperStateNameGen;
                 diaperStateUpdates["img"] = diaperStateCombTrack.image;
             }
 
-            let diaperCapacityPercent = this.allFluidsCount / this.protectionLevel;
+            let diaperCapacityPercent = diaperWetness / diaperProtection;
+
+            if(diaperCapacityPercent >= 1){
+                diaperCapacityPercent = ((clothWetness / clothProtection)/2) + diaperCapacityPercent;
+            }
 
             const diaperCapacity = Math.floor(100 - (diaperCapacityPercent * 100));
             const oldBaseVal = dpState.system.base;
@@ -514,7 +546,8 @@ export class DiaperActorHelper extends ActorHelper {
     }
 
     get pottyTraining() {
-        return this.actor.items.find(i => i.type === "actorResource" && this.constructor.actorResourceToName(i) === this.constructor.DIAPER_STATE_KEY);
+        const [diaperTypeStr, diaperCapacityStr] = DiaperActorHelper.DIAPER_CAPACITY_KEY.split(".");
+        return this.getActorResourceInstance(diaperTypeStr,diaperCapacityStr);
     }
     requirePoopPottyTraining(){
         if(this.poopPottyTraining) return true;
@@ -533,7 +566,7 @@ export class DiaperActorHelper extends ActorHelper {
         return this.actor.items.find(i => i.name === this.constructor.CUM_ALLOWED_POTTY_TRAINING)
     }
     get protectionLevel(){
-        const capacity = this.getActorResourceInstance("diaper","capacity");
+        const capacity = this.pottyTraining;
         if(capacity?.value !== undefined) return capacity.value;
         return 0;
     }
