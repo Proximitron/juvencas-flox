@@ -74,11 +74,11 @@ Hooks.on("updateActor", function(actor, data, event, affectedUid) {
 
 });
 Hooks.on("updateItem", function(item, data, event, affectedUid) {
-	if(item?.system?.type === "nanocyte"){
+	if(item?.system?.type === "nanocyte" && item.actor){
 		const helper = NanocyteActorHelper.byActor(item.actor);
 		helper.updateNanocyteResources();
 	}
-	else if(item?.system?.type === "diaper"){
+	else if(item?.system?.type === "diaper" && item.actor){
 		const helper = DiaperActorHelper.byActor(item.actor);
 		helper.updateDiaperStateResources();
 	}
