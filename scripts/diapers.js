@@ -322,6 +322,7 @@ export class DiaperActorHelper extends ActorHelper {
 
     static DIAPER_STATE_KEY = "protection.state";
     static DIAPER_CAPACITY_KEY = "protection.capacity";
+    static POTTY_TRAINING_KEY = "potty.training";
 
     static CUM_PREVENTION = "Caged";
 
@@ -487,7 +488,7 @@ export class DiaperActorHelper extends ActorHelper {
                 if(clothProtection > 0) {
                     diaperCapacityPercent = ((clothWetness / clothProtection) / 2) + diaperCapacityPercent;
                 }
-                else if(allFluids > 0){
+                else if(allFluids > allProtection){
                     diaperCapacityPercent = 2;
                 }
             }
@@ -627,7 +628,7 @@ export class DiaperActorHelper extends ActorHelper {
             return source;
         }
     }
-    rollPottyCheck(source,effectAmount = 1){
+    async rollPottyCheck(source,effectAmount = 1){
         const sourceName = DiaperActorHelper.sourceToItemName(source);
         console.log(`Potty check for ${sourceName}`)
         let accidentMap;
@@ -642,13 +643,13 @@ export class DiaperActorHelper extends ActorHelper {
         for (const [accidentType, accidentChance] of Object.entries(accidentMap)) {
             if( (Math.random() * 100.0) >= accidentChance){
                 if(this.accidentAllowed(accidentType)){
-                    this.accidentManager(accidentType,effectAmount * 2, undefined, source);
+                    await this.accidentManager(accidentType,effectAmount * 2, undefined, source);
                 }
                 else if(this.accidentAllowed(DiaperActorHelper.PEE)){
-                    this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                    await this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
                 }
                 else if(this.accidentAllowed(DiaperActorHelper.WATER)){
-                    this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                    await this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
                 }
                 else {
                     throw Error("No valid accident type found for "+ this.actor.name);
@@ -670,14 +671,14 @@ export class DiaperActorHelper extends ActorHelper {
             for (const itm of this.wetableCloth) {
                 amount = await this.wetCloth(itemName, amount, itm);
                 if(amount <= 0) {
-                    this.informAboutAccident(itemName,subType, source);
+                    await this.informAboutAccident(itemName,subType, source);
                     return;
                 }
             }
 
             if(amount > 0){
-                this.addItem(itemName, amount);
-                this.informAboutAccident(itemName,"accident", source);
+                await this.addItem(itemName, amount);
+                await this.informAboutAccident(itemName,"accident", source);
             }
             /*if(amount > 0) {
                 console.log(`Macro | wetManager failed to execute request. ${amount} left in request.`);
@@ -687,7 +688,7 @@ export class DiaperActorHelper extends ActorHelper {
     }
 
     static informsMsg = {
-        "diaper.state": {
+        [DiaperActorHelper.DIAPER_STATE_KEY]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"]
         },
         concentrating: {
