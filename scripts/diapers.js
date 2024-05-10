@@ -444,6 +444,7 @@ export class DiaperActorHelper extends ActorHelper {
         return amount;
     }
     updateDiaperStateResources() {
+        return;
         const diaperWetness = this.diaperWetness;
         const diaperProtection = this.diaperProtectionLevel;
         const allFluids = this.allFluidsCount;
