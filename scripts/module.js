@@ -48,20 +48,20 @@ Hooks.once('ready', async function() {
 
 Hooks.on("afterItemsProcessed", function(actor){
 	const helper = DiaperActorHelper.byActor(actor.actor);
-	helper.updateDiaperStateResources();
+	if(helper) helper.updateDiaperStateResources();
 });
 Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 	if(typeof data?.system?.currency?.upb !== "undefined"){
 		const helper = DiaperActorHelper.byActor(actor);
-		helper.whisper("UPB update:<br>"+actor.system.currency.upb+" TO "+data.system.currency.upb);
+		if(helper) helper.whisper("UPB update:<br>"+actor.system.currency.upb+" TO "+data.system.currency.upb);
 	}
 	if(typeof data?.system?.currency?.credit !== "undefined"){
 		const helper = DiaperActorHelper.byActor(actor);
-		helper.whisper("Credit update:<br>"+actor.system.currency.credit+" TO "+data.system.currency.credit);
+		if(helper) helper.whisper("Credit update:<br>"+actor.system.currency.credit+" TO "+data.system.currency.credit);
 	}
 	if(typeof event?._hpDiffs !== "undefined"){
 		const helper = DiaperActorHelper.byActor(actor);
-		if(helper.pottyTraining){
+		if(helper?.pottyTraining){
 			helper.rollPottyCheck("damage",event._hpDiffs);
 		}
 	}
@@ -69,18 +69,18 @@ Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
 Hooks.on("updateActor", function(actor, data, event, affectedUid) {
 	if(typeof data?.system?.currency?.upb !== "undefined"){
 		const helper = NanocyteActorHelper.byActor(actor);
-		helper.updateNanocyteResources();
+		if(helper) helper.updateNanocyteResources();
 	}
 
 });
 Hooks.on("updateItem", function(item, data, event, affectedUid) {
 	if(item?.system?.type === "nanocyte" && item.actor){
 		const helper = NanocyteActorHelper.byActor(item.actor);
-		helper.updateNanocyteResources();
+		if(helper) helper.updateNanocyteResources();
 	}
 	else if(item?.system?.type === "diaper" && item.actor){
 		const helper = DiaperActorHelper.byActor(item.actor);
-		helper.updateDiaperStateResources();
+		if(helper) helper.updateDiaperStateResources();
 	}
 });
 
@@ -96,7 +96,7 @@ Hooks.on("closeApplication", function(app,init){
 		}
 
 		const helper = DiaperActorHelper.byActor(actor);
-		helper.checkModifierImpact(app.availableModifiers);
+		if(helper) helper.checkModifierImpact(app.availableModifiers);
 	}
 });
 Hooks.on("onActorRest", function(restResults){
