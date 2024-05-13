@@ -62,8 +62,7 @@ export class ActorHelper extends ActorItemHelper {
         super(t, e, n, o);
     }
     static byActor(actor){
-        if(actor?.ownership !== undefined) return undefined;
-        if(game?.user?.id !== undefined) return undefined;
+        if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
         if(actor.ownership[game.user.id] !== 3) return undefined;
 
         const tokens = actor.getActiveTokens();
@@ -208,8 +207,7 @@ export class NanocyteActorHelper extends ActorHelper  {
         super(t, e, n, o);
     }
     static byActor(actor){
-        if(actor?.ownership !== undefined) return undefined;
-        if(game?.user?.id !== undefined) return undefined;
+        if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
         if(actor.ownership[game.user.id] !== 3) return undefined;
 
         const tokens = actor.getActiveTokens();
@@ -358,8 +356,7 @@ export class DiaperActorHelper extends ActorHelper {
         return await this.itemPack.getDocument(this.constructor.items[name]);
     }
     static byActor(actor){
-        if(actor?.ownership !== undefined) return undefined;
-        if(game?.user?.id !== undefined) return undefined;
+        if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
         if(actor.ownership[game.user.id] !== 3) return undefined;
 
         const tokens = actor.getActiveTokens();
