@@ -222,10 +222,9 @@ export class NanocyteActorHelper extends ActorHelper  {
 
         // Stability calc START
         let subType = "stability";
-        const conditionItems = this.getActorResource(type,subType);
-        if(conditionItems.length <= 0) return;
+        let found = this.getActorResource(type,subType);
+        if(found === undefined) return; // Stability calc will only work with stability existing
 
-        let found = conditionItems[0];
         const nameGen = "Nanocyte Stability ("+ nFormatter(this.actor.system.currency.upb,2) + "/" + nFormatter(this.nanocyteBaseMass,2) + ")";
         let updates = {};
 
@@ -444,7 +443,6 @@ export class DiaperActorHelper extends ActorHelper {
         return amount;
     }
     updateDiaperStateResources() {
-        return;
         const diaperWetness = this.diaperWetness;
         const diaperProtection = this.diaperProtectionLevel;
         const allFluids = this.allFluidsCount;
@@ -460,7 +458,7 @@ export class DiaperActorHelper extends ActorHelper {
 
         if(dpCapacity !== undefined){
             const diaperCapacityNameGen = `Protection Capacity (Diaper: ${diaperWetness}/${diaperProtection}, Cloth: ${clothWetness}/${clothProtection})`;
-            if(dpCapacity.name !== diaperCapacityNameGen){
+            if(dpCapacity.name !== diaperCapacityNameGen && diaperCapacityNameGen){
                 diaperCapacityUpdates["name"] = diaperCapacityNameGen;
             }
             if (Object.keys(diaperCapacityUpdates).length > 0) {
@@ -476,9 +474,11 @@ export class DiaperActorHelper extends ActorHelper {
         if(dpState !== undefined) {
             const diaperStateCombTrack = this.getCombatTrackerData(dpState);
             const diaperStateNameGen = "Protection State (" + diaperStateCombTrack.title + ")";
-            if (dpState.name !== diaperStateNameGen) {
+            if (dpState.name !== diaperStateNameGen && diaperStateNameGen) {
                 diaperStateUpdates["name"] = diaperStateNameGen;
-                diaperStateUpdates["img"] = diaperStateCombTrack.image;
+                if(diaperStateCombTrack.image) {
+                    diaperStateUpdates["img"] = diaperStateCombTrack.image;
+                }
             }
 
             let diaperCapacityPercent = 1;
@@ -496,7 +496,7 @@ export class DiaperActorHelper extends ActorHelper {
 
             const diaperCapacity = Math.floor(100 - (diaperCapacityPercent * 100));
             const oldBaseVal = dpState.system.base;
-            if (oldBaseVal !== diaperCapacity) {
+            if (oldBaseVal !== diaperCapacity && diaperCapacity) {
                 diaperStateUpdates["system.base"] = diaperCapacity;
             }
 

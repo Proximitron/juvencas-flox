@@ -1,3 +1,5 @@
-2024/05/09-15:28:27.923 3fb4 Recovering log #75
-2024/05/09-15:28:27.934 3fb4 Delete type=0 #75
-2024/05/09-15:28:27.934 3fb4 Delete type=3 #74
+2024/05/13-17:00:35.771 7bc Recovering log #77
+2024/05/13-17:00:35.771 7bc Level-0 table #79: started
+2024/05/13-17:00:35.779 7bc Level-0 table #79: 2257 bytes OK
+2024/05/13-17:00:35.790 7bc Delete type=0 #77
+2024/05/13-17:00:35.790 7bc Delete type=3 #76
