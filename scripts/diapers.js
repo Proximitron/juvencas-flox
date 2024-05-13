@@ -59,7 +59,7 @@ function nFormatter(num, digits) {
 }
 export class ActorHelper extends ActorItemHelper {
     constructor(t, e, n, o = {}) {
-        super(t, e, n, o = {});
+        super(t, e, n, o);
     }
     static byActor(actor){
         if(actor?.ownership !== undefined) return undefined;
@@ -69,7 +69,7 @@ export class ActorHelper extends ActorItemHelper {
         const tokens = actor.getActiveTokens();
         let tokenId = null;
         if(tokens.length > 0) tokenId = tokens[0].id;
-        return new ActorHelper(actor.id,tokens,game?.scenes?.viewed?.id,{"actor": actor});
+        return new ActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
     get itemPack() {
         return game.packs.get("juvencas-flox.juvencas-items");
@@ -205,14 +205,19 @@ export class ActorHelper extends ActorItemHelper {
 
 export class NanocyteActorHelper extends ActorHelper  {
     constructor(t, e, n, o = {}) {
-        super(t, e, n, o = {});
+        super(t, e, n, o);
     }
     static byActor(actor){
+        if(actor?.ownership !== undefined) return undefined;
+        if(game?.user?.id !== undefined) return undefined;
+        if(actor.ownership[game.user.id] !== 3) return undefined;
+
         const tokens = actor.getActiveTokens();
         let tokenId = null;
         if(tokens.length > 0) tokenId = tokens[0].id;
-        return new NanocyteActorHelper(actor.id,tokens,game?.scenes?.viewed?.id,{"actor": actor});
+        return new NanocyteActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
+
     get isNanocyte(){
         return !!this.actor.system.classes.nanocyte;
     }
@@ -313,7 +318,7 @@ export class NanocyteActorHelper extends ActorHelper  {
 }
 export class DiaperActorHelper extends ActorHelper {
     constructor(t, e, n, o = {}) {
-        super(t, e, n, o = {});
+        super(t, e, n, o);
     }
     static PEE = "Pee";
     static POO = "Poop";
@@ -353,10 +358,13 @@ export class DiaperActorHelper extends ActorHelper {
         return await this.itemPack.getDocument(this.constructor.items[name]);
     }
     static byActor(actor){
-        let tokens = undefined;
-        if(actor.getActiveTokens !== undefined) tokens = actor.getActiveTokens();
-        let tokenId = undefined;
-        if(tokens !== undefined && tokens.length > 0) tokenId = tokens[0].id;
+        if(actor?.ownership !== undefined) return undefined;
+        if(game?.user?.id !== undefined) return undefined;
+        if(actor.ownership[game.user.id] !== 3) return undefined;
+
+        const tokens = actor.getActiveTokens();
+        let tokenId = null;
+        if(tokens.length > 0) tokenId = tokens[0].id;
         return new DiaperActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
     static getItemCapacity(item){
