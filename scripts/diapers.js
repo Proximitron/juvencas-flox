@@ -68,7 +68,7 @@ export class ActorHelper extends ActorItemHelper {
         const tokens = actor.getActiveTokens();
         let tokenId = null;
         if(tokens.length > 0) tokenId = tokens[0].id;
-        return new ActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
+        return new this(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
     get itemPack() {
         return game.packs.get("juvencas-flox.juvencas-items");
@@ -206,15 +206,6 @@ export class NanocyteActorHelper extends ActorHelper  {
     constructor(t, e, n, o = {}) {
         super(t, e, n, o);
     }
-    static byActor(actor){
-        if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
-        if(actor.ownership[game.user.id] !== 3) return undefined;
-
-        const tokens = actor.getActiveTokens();
-        let tokenId = null;
-        if(tokens.length > 0) tokenId = tokens[0].id;
-        return new NanocyteActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
-    }
 
     get isNanocyte(){
         return !!this.actor.system.classes.nanocyte;
@@ -334,19 +325,20 @@ export class DiaperActorHelper extends ActorHelper {
 
     static DIRTY_CLOTH = "Soiled Cloth";
 
+    static STATE_CONCENTRATING = "concentrating";
     static items = {
         // Fluids
-        [DiaperActorHelper.PEE]: "dkV4O741UrDLsPcP",
-        [DiaperActorHelper.POO]: "F8njSFNStuMBqCzG",
-        [DiaperActorHelper.CUM]: "4tLWbPTmzDnxOC8X",
-        [DiaperActorHelper.WATER]: "I6sgq423yMtlp4cg",
+        [this.PEE]: "dkV4O741UrDLsPcP",
+        [this.POO]: "F8njSFNStuMBqCzG",
+        [this.CUM]: "4tLWbPTmzDnxOC8X",
+        [this.WATER]: "I6sgq423yMtlp4cg",
 
         // Additional Trainings
-        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: "7ptWGtpU7hnLoIHf",
-        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: "4UO4QD4eje9LFXYQ",
+        [this.POO_ALLOWED_POTTY_TRAINING]: "7ptWGtpU7hnLoIHf",
+        [this.CUM_ALLOWED_POTTY_TRAINING]: "4UO4QD4eje9LFXYQ",
 
         // Buffs/Debuffs
-        [DiaperActorHelper.DIRTY_CLOTH]: "a5WzbEPn0gyEO3AM",
+        [this.DIRTY_CLOTH]: "a5WzbEPn0gyEO3AM",
     }
 
     async item(name) {
@@ -354,15 +346,6 @@ export class DiaperActorHelper extends ActorHelper {
             throw new Error(`Item ${name} not found in items list`);
         }
         return await this.itemPack.getDocument(this.constructor.items[name]);
-    }
-    static byActor(actor){
-        if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
-        if(actor.ownership[game.user.id] !== 3) return undefined;
-
-        const tokens = actor.getActiveTokens();
-        let tokenId = null;
-        if(tokens.length > 0) tokenId = tokens[0].id;
-        return new DiaperActorHelper(actor.id,tokenId,game?.scenes?.viewed?.id,{"actor": actor});
     }
     static getItemCapacity(item){
         let capacity = 0;
@@ -414,9 +397,9 @@ export class DiaperActorHelper extends ActorHelper {
     }
     async wetCloth(itemName,toAdd, target){
         if(target.max === undefined){
-            target = {"item": target, "max": DiaperActorHelper.getItemCapacity(target)};
+            target = {"item": target, "max": this.constructor.getItemCapacity(target)};
         }
-        const diff = target.max - DiaperActorHelper.fluidAmount(target);
+        const diff = target.max - this.constructor.fluidAmount(target);
         if(diff > 0){
             const reallyToAdd = Math.min(diff,toAdd);
             await this.addItem(itemName, reallyToAdd, target.item);
@@ -426,17 +409,13 @@ export class DiaperActorHelper extends ActorHelper {
 
         return toAdd;
     }
-    static protection(target){
-        if(target.filter === undefined) target = DiaperActorHelper.targetToContentList(target);
-
-    }
     static fluids(target) {
-        if(target.filter === undefined) target = DiaperActorHelper.targetToContentList(target);
-        return target.filter(dp => dp.name === DiaperActorHelper.PEE || dp.name === DiaperActorHelper.POO
-            || dp.name === DiaperActorHelper.CUM || dp.name === DiaperActorHelper.WATER);
+        if(target.filter === undefined) target = this.targetToContentList(target);
+        return target.filter(dp => dp.name === this.PEE || dp.name === this.POO
+            || dp.name === this.CUM || dp.name === this.WATER);
     }
     static fluidAmount(target){
-        return DiaperActorHelper.amount(DiaperActorHelper.fluids(target))
+        return this.amount(this.fluids(target))
     }
     static targetToContentList(target){
         let targetList = [];
@@ -446,7 +425,7 @@ export class DiaperActorHelper extends ActorHelper {
         return targetList;
     }
     static amount(target){
-        if(target.forEach === undefined) target = DiaperActorHelper.targetToContentList(target);
+        if(target.forEach === undefined) target = this.targetToContentList(target);
         let amount = 0;
         target.forEach(item => amount += Number(item.system.quantity));
         return amount;
@@ -462,7 +441,7 @@ export class DiaperActorHelper extends ActorHelper {
         // Diaper Capacity calc START
         const diaperCapacityUpdates = {};
 
-        const [diaperTypeStr, diaperCapacityStr] = DiaperActorHelper.DIAPER_CAPACITY_KEY.split(".");
+        const [diaperTypeStr, diaperCapacityStr] = this.constructor.DIAPER_CAPACITY_KEY.split(".");
         const dpCapacity = this.getActorResource(diaperTypeStr,diaperCapacityStr);
 
         if(dpCapacity !== undefined){
@@ -477,19 +456,10 @@ export class DiaperActorHelper extends ActorHelper {
         // Diaper Capacity calc END
 
         // Diaper State calc END
-        const diaperStateUpdates = {};
-        const [diaperStateTypeStr, diaperStateStr] = DiaperActorHelper.DIAPER_STATE_KEY.split(".");
+        let diaperStateUpdates = {};
+        const [diaperStateTypeStr, diaperStateStr] = this.constructor.DIAPER_STATE_KEY.split(".");
         const dpState = this.getActorResource(diaperStateTypeStr,diaperStateStr);
         if(dpState !== undefined) {
-            const diaperStateCombTrack = this.getCombatTrackerData(dpState);
-            const diaperStateNameGen = "Protection State (" + diaperStateCombTrack.title + ")";
-            if (dpState.name !== diaperStateNameGen && diaperStateNameGen) {
-                diaperStateUpdates["name"] = diaperStateNameGen;
-                if(diaperStateCombTrack.image) {
-                    diaperStateUpdates["img"] = diaperStateCombTrack.image;
-                }
-            }
-
             let diaperCapacityPercent = 1;
             if(diaperProtection > 0){
                 diaperCapacityPercent = diaperWetness / diaperProtection;
@@ -505,8 +475,21 @@ export class DiaperActorHelper extends ActorHelper {
 
             const diaperCapacity = Math.floor(100 - (diaperCapacityPercent * 100));
             const oldBaseVal = dpState.system.base;
-            if (oldBaseVal !== diaperCapacity && diaperCapacity) {
+            if (oldBaseVal !== diaperCapacity && !isNaN(Number(diaperCapacity))) {
                 diaperStateUpdates["system.base"] = diaperCapacity;
+            }
+            if (Object.keys(diaperStateUpdates).length > 0) {
+                dpState.update(diaperStateUpdates);
+                diaperStateUpdates = {};
+            }
+
+            const diaperStateCombTrack = this.getCombatTrackerData(dpState);
+            const diaperStateNameGen = "Protection State (" + diaperStateCombTrack.title + ")";
+            if (dpState.name !== diaperStateNameGen && diaperStateNameGen) {
+                diaperStateUpdates["name"] = diaperStateNameGen;
+                if(diaperStateCombTrack.image) {
+                    diaperStateUpdates["img"] = diaperStateCombTrack.image;
+                }
             }
 
             if (Object.keys(diaperStateUpdates).length > 0) {
@@ -564,7 +547,7 @@ export class DiaperActorHelper extends ActorHelper {
     }
 
     get pottyTraining() {
-        const [diaperTypeStr, diaperCapacityStr] = DiaperActorHelper.DIAPER_CAPACITY_KEY.split(".");
+        const [diaperTypeStr, diaperCapacityStr] = this.constructor.DIAPER_CAPACITY_KEY.split(".");
         return this.getActorResourceInstance(diaperTypeStr,diaperCapacityStr);
     }
     requirePoopPottyTraining(){
@@ -597,11 +580,11 @@ export class DiaperActorHelper extends ActorHelper {
     }
 
     get allFluidsCount() {
-        return DiaperActorHelper.fluidAmount(this.actor);
+        return this.constructor.fluidAmount(this.actor);
     }
 
     checkModifierImpact(modifiers){
-        const found = modifiers.filter(m => m.enabled && m.item && this.constructor.sourceToItemName(m) === DiaperActorHelper.DIAPER_STATE_KEY);
+        const found = modifiers.filter(m => m.enabled && m.item && this.constructor.sourceToItemName(m) === this.constructor.DIAPER_STATE_KEY);
         found.forEach(m => this.rollPottyCheck(m));
     }
     static sourceToName(source){
@@ -613,9 +596,9 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     static accidentResults = {
-        [DiaperActorHelper.DIAPER_STATE_KEY]: {[DiaperActorHelper.PEE]: 50,[DiaperActorHelper.POO]: 20},
-        [DiaperActorHelper.POO_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.POO]: 100},
-        [DiaperActorHelper.CUM_ALLOWED_POTTY_TRAINING]: {[DiaperActorHelper.CUM]: 100}
+        [this.DIAPER_STATE_KEY]: {[this.PEE]: 50,[this.POO]: 20},
+        [this.POO_ALLOWED_POTTY_TRAINING]: {[this.POO]: 100},
+        [this.CUM_ALLOWED_POTTY_TRAINING]: {[this.CUM]: 100}
     }
     static actorResourceToName(resource){
         if(resource.type !== "actorResource") {
@@ -626,7 +609,7 @@ export class DiaperActorHelper extends ActorHelper {
     }
     static sourceToItemName(source){
         if(source.item?.type === "actorResource"){
-            return DiaperActorHelper.actorResourceToName(source.item);
+            return this.actorResourceToName(source.item);
         }
         else if(source.item?.name !== undefined) {
             return source.item?.name;
@@ -639,15 +622,15 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     async rollPottyCheck(source,effectAmount = 1){
-        const sourceName = DiaperActorHelper.sourceToItemName(source);
+        const sourceName = this.constructor.sourceToItemName(source);
         console.log(`Potty check for ${sourceName}`)
         let accidentMap;
-        if(DiaperActorHelper.accidentResults[sourceName]){
-            accidentMap = DiaperActorHelper.accidentResults[sourceName];
+        if(this.constructor.accidentResults[sourceName]){
+            accidentMap = this.constructor.accidentResults[sourceName];
             console.log("Found AccidentMap for "+sourceName);
         }
         else {
-            accidentMap = DiaperActorHelper.accidentResults[DiaperActorHelper.DIAPER_STATE_KEY];
+            accidentMap = this.constructor.accidentResults[this.constructor.DIAPER_STATE_KEY];
             console.log("Selecting default AccidentMap for "+sourceName);
         }
         for (const [accidentType, accidentChance] of Object.entries(accidentMap)) {
@@ -655,11 +638,11 @@ export class DiaperActorHelper extends ActorHelper {
                 if(this.accidentAllowed(accidentType)){
                     await this.accidentManager(accidentType,effectAmount * 2, undefined, source);
                 }
-                else if(this.accidentAllowed(DiaperActorHelper.PEE)){
-                    await this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                else if(this.accidentAllowed(this.constructor.PEE)){
+                    await this.accidentManager(this.constructor.WATER,effectAmount * 2, undefined, source);
                 }
-                else if(this.accidentAllowed(DiaperActorHelper.WATER)){
-                    await this.accidentManager(DiaperActorHelper.WATER,effectAmount * 2, undefined, source);
+                else if(this.accidentAllowed(this.constructor.WATER)){
+                    await this.accidentManager(this.constructor.WATER,effectAmount * 2, undefined, source);
                 }
                 else {
                     throw Error("No valid accident type found for "+ this.actor.name);
@@ -698,14 +681,14 @@ export class DiaperActorHelper extends ActorHelper {
     }
 
     static informsMsg = {
-        [DiaperActorHelper.DIAPER_STATE_KEY]: {
+        [this.DIAPER_STATE_KEY]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"]
         },
-        concentrating: {
+        [this.STATE_CONCENTRATING]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
             dream: ["Deep in a slumber.","While sleeping."]
         },
-        [DiaperActorHelper.PEE]: {
+        [this.PEE]: {
             normal: ["{name} pauses their adventure, looking 🌧 momentarily puzzled 🌧, but then continues with a contented grin.",
                 "A warm glow seems to emanate from {name}, and they look more 🌧 relaxed 🌧 than before.", "You hear a surprised noise from {name} as their diaper is getting 🌧 warm 🌧.",
                 "{name}'s cheeks turn a slight shade of pink as they momentarily shift from 🌧 foot to foot 🌧.",
@@ -718,7 +701,7 @@ export class DiaperActorHelper extends ActorHelper {
                 "Unexpectedly, there seems to be a major 🌧 leak 🌧 around {name}. Maintenance required immediatly.",
                 "Looks like {name}'s containment system was overwhelmed. There's a bit of a 🌧 spill 🌧 that needs attention!",
                 "There’s a noticeable 🌧 puddle 🌧 forming around {name}, an indication of an unexpected overflow."]},
-        [DiaperActorHelper.POO]: {
+        [this.POO]: {
             normal: ["{name} takes a moment, concentrating intensely on a 💩 'difficult task' 💩 before smiling triumphantly.",
                 "{name} freezes up for a second and squats down. They makes a small, cute noise followed by a 💩 relieved 💩 smile.",
                 "You notice {name} engaging in some secretive, 💩 strenuous activity 💩, but they soon look up with a grin of success.",
@@ -737,14 +720,14 @@ export class DiaperActorHelper extends ActorHelper {
                 "It appears {name} overestimated their 💩 containment capacity 💩. A bath is in order!",
                 "{name}'s adventures lead to an unplanned escape attempt by some rebellious cargo!"]
         },
-        [DiaperActorHelper.CUM]: {
+        [this.CUM]: {
             normal: ["{name} feels themself getting close! It's amazing, it's OH! ♥ OH ♥!!", "{name} making more and more happy noises until something happens. They makes another ♥ cute noise ♥, followed by a really big smile!"],
             dream: ["{name} dreams of a happy place, it feels soooo ♥ good ♥! But oddly sticky...",
                 "In deep dream, it comes! You are the winner! {name} don't know of what but it feel good! Its ♥ exhilarating ♥! Phu!",
                 "Half asleep {name} feels how something amazing is happening. It builds and finally releases in a ♥ big clash ♥! Exhausted they fall asleep immediately."],
             accident: ["Oh NO! {name}'s energetic humping ripped open their diaper. It's... it's everywhere! What a ♥ sticky ♥ mess!"]
         },
-        [DiaperActorHelper.CUM_PREVENTION]: {
+        [this.CUM_PREVENTION]: {
             normal: ["{name} gets tense and agitated, red in the face and whiny. But but 🔐 nothing 🔐 really happens, beside some cute noises."],
             dream: ["{name} dreams of their happy place, but something 🔐 prevents 🔐 them from climbing onto the happy cloud, floating above."]
         }
@@ -757,13 +740,12 @@ export class DiaperActorHelper extends ActorHelper {
         }
         return getRandomValue(key).formatUnicorn({"name" : this.actor.name})
     }
-    async informAboutAccident(type,subType,source = "concentrating") {
+    async informAboutAccident(type,subType,source = this.constructor.STATE_CONCENTRATING) {
         console.log(`Macro | ${this.actor.name} had an ${type}-Accident of ${type}`);
 
         const sourceName = this.constructor.sourceToName(source);
 
         let watcherPerspective = `${this.actor.name} uses "${sourceName}". `;
-        const reason = "concentrating"
         const messageHeaderPC = "<b>Uh-Oh!</b><br>";
         const messageHeaderGM = "<b>Accident Report</b><br>";
         let messageContentGM = "";
