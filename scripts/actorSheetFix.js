@@ -345,6 +345,7 @@ export class FixedActorSheetSFRPGCharacter extends ActorSheetSFRPGCharacter {
             }
         } else {
             if(!RPC.rpc.callbacks["dragItemToCollection"]) {
+                RPC.rpc._initialize();
                 initializeRemoteInventory();
             }
             const e = {
