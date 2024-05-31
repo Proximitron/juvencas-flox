@@ -63,7 +63,7 @@ export class ActorHelper extends ActorItemHelper {
     }
     static byActor(actor){
         if(actor?.ownership === undefined || game?.user?.id === undefined) return undefined;
-        if(actor.ownership[game.user.id] !== 3) return undefined;
+        if(actor.ownership[game.user.id] !== 3 && game?.user?.isGM !== true) return undefined;
 
         const tokens = actor.getActiveTokens();
         let tokenId = null;
