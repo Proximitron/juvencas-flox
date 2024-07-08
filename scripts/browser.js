@@ -269,7 +269,7 @@ class EquipmentBrowserSFRPG extends DocumentBrowserSFRPG {
                     type: s.type
                 };
 
-                i.system.price = s.system.price * this.options.priceModifier;
+                i.system.price = Math.ceil(s.system.price * this.options.priceModifier);
                 this.allowedItem(s) && t.set(i.uuid, i)
             }
         }
