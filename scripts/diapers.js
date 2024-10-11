@@ -657,6 +657,7 @@ export class DiaperActorHelper extends ActorHelper {
                 }
             }
         }
+        if(!hadAccident) await this.informAboutNoAccident("none",null);
     }
 
     get isConscious(){
