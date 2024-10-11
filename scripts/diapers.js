@@ -649,6 +649,7 @@ export class DiaperActorHelper extends ActorHelper {
                 }
                 else if(this.accidentAllowed(this.constructor.WATER)){
                     await this.accidentManager(this.constructor.WATER,effectAmount * amountMultiply * 2, undefined, source);
+                    hadAccident = true;
                     break;
                 }
                 else {
@@ -790,6 +791,31 @@ export class DiaperActorHelper extends ActorHelper {
         } else {
             console.error(`Macro | informAboutAccident encountered unknown type ${type}`)
         }
+
+        const chatData = {
+            user: this.actorUser.id,
+            speaker: ChatMessage.getSpeaker(),
+            content: messageHeaderPC + watcherPerspective
+        };
+
+        ChatMessage.create(chatData, {});
+    }
+    async informAboutNoAccident(type,subType,source = this.constructor.STATE_CONCENTRATING) {
+        console.log(`Macro | ${this.actor.name} had NO Accident`);
+
+        const sourceName = this.constructor.sourceToName(source);
+
+        let watcherPerspective = `${this.actor.name} uses "${sourceName}". `;
+        const messageHeaderPC = "<b>Phuu!</b><br>";
+        let messageContentGM = "";
+
+        let sneakDcMod = 0;
+        let selfAwarenessDifficultDcMod = 10;
+        // watcherPerspective += this.infoMsg(reason,subType);
+        const accident = subType === "accident"
+
+        messageContentGM += `${this.actor.name} could hold it, this time.<br><br>`;
+        watcherPerspective+= "Could hold it, this time!";
 
         const chatData = {
             user: this.actorUser.id,
