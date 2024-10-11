@@ -596,7 +596,7 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     static accidentResults = {
-        [this.DIAPER_STATE_KEY]: {[this.PEE]: 50,[this.POO]: 20},
+        [this.DIAPER_STATE_KEY]: {[this.PEE]: 40,[this.POO]: 20},
         [this.POO_ALLOWED_POTTY_TRAINING]: {[this.POO]: 100},
         [this.CUM_ALLOWED_POTTY_TRAINING]: {[this.CUM]: 100}
     }
@@ -633,16 +633,23 @@ export class DiaperActorHelper extends ActorHelper {
             accidentMap = this.constructor.accidentResults[this.constructor.DIAPER_STATE_KEY];
             console.log("Selecting default AccidentMap for "+sourceName);
         }
+        var hadAccident = false;
         for (const [accidentType, accidentChance] of Object.entries(accidentMap)) {
-            if( (Math.random() * 100.0) >= accidentChance){
+            if( (Math.random() * 100.0) <= accidentChance){
+                var amountMultiply = Math.ceil(Math.random() * 4);
                 if(this.accidentAllowed(accidentType)){
-                    await this.accidentManager(accidentType,effectAmount * 2, undefined, source);
+                    await this.accidentManager(accidentType,effectAmount * amountMultiply, undefined, source);
+                    hadAccident = true;
+                    break;
                 }
                 else if(this.accidentAllowed(this.constructor.PEE)){
-                    await this.accidentManager(this.constructor.WATER,effectAmount * 2, undefined, source);
+                    await this.accidentManager(this.constructor.WATER,effectAmount * amountMultiply * 2, undefined, source);
+                    hadAccident = true;
+                    break;
                 }
                 else if(this.accidentAllowed(this.constructor.WATER)){
-                    await this.accidentManager(this.constructor.WATER,effectAmount * 2, undefined, source);
+                    await this.accidentManager(this.constructor.WATER,effectAmount * amountMultiply * 2, undefined, source);
+                    break;
                 }
                 else {
                     throw Error("No valid accident type found for "+ this.actor.name);
