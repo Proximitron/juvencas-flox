@@ -596,7 +596,7 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     static accidentResults = {
-        [this.DIAPER_STATE_KEY]: {[this.PEE]: 40,[this.POO]: 20},
+        [this.DIAPER_STATE_KEY]: {[this.PEE]: 30,[this.POO]: 15},
         [this.POO_ALLOWED_POTTY_TRAINING]: {[this.POO]: 100},
         [this.CUM_ALLOWED_POTTY_TRAINING]: {[this.CUM]: 100}
     }
