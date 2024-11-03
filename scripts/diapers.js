@@ -502,7 +502,17 @@ export class DiaperActorHelper extends ActorHelper {
             }
         }
         if(diaperStateWasChanged){
-            this.informAboutDiaperState();
+            // This section is a timed workaround for multiple triggered events.
+            const myself = this;
+            const dp = this.diaper;
+            if (dp.timeoutId) {
+                clearTimeout(dp.timeoutId);
+            }
+
+            dp.timeoutId = setTimeout(() => {
+                myself.informAboutDiaperState();
+                dp.timeoutId = null;
+            }, 1000);
         }
         // Diaper State calc END
     }
@@ -700,13 +710,13 @@ export class DiaperActorHelper extends ActorHelper {
     static informsMsg = {
         [this.DIAPER_STATE_KEY]: {
             normal: ["Ups! This is an error, please report this!"],
-            "Soiled Clothing": ["The {diaper} is full 💩 and 💦 leaking 💦 badly. 🤢 Serious 🤢 cleanup required, quickly!"],
-            "Leaking": ["The {diaper} is full 💩 and leaking 💦 a little!"],
-            "Full Diaper": ["The {diaper} is full 💩 to the brim, but it is not leaking yet."],
-            "Heavy Diaper": ["The {diaper} feels heavy ⛰️. Probably time for a change."],
-            "Soggy Diaper": ["The {diaper} feels used 🌧, but not in a bad way."],
-            "Diapered": ["The {diaper} feels pretty dry ☀️ doesn't crinkle."],
-            "Crinkel Pants": ["{name}'s {diaper} is bone dry 🦴 and crinkels."],
+            "Soiled Clothing": ["The {diaper} {is} full 💩 and 💦 leaking 💦 badly. 🤢 Serious 🤢 cleanup required, quickly!"],
+            "Leaking": ["The {diaper} {is} full 💩 and leaking 💦 a little!"],
+            "Full Diaper": ["The {diaper} {is} full 💩 to the brim, but it is not leaking yet."],
+            "Heavy Diaper": ["The {diaper} {is} heavy ⛰️. Probably time for a change."],
+            "Soggy Diaper": ["The {diaper} {is} used 🌧, but not in a bad way."],
+            "Diapered": ["The {diaper} {is} pretty ☀️ dry doesn't crinkle."],
+            "Crinkel Pants": ["The {diaper} {is} bone 🦴 dry and crinkels."],
         },
         [this.STATE_CONCENTRATING]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
@@ -745,11 +755,11 @@ export class DiaperActorHelper extends ActorHelper {
                 "{name}'s adventures lead to an unplanned escape attempt by some rebellious cargo!"]
         },
         [this.CUM]: {
-            normal: ["{name} feels themself getting close! It's amazing, it's OH! ♥ OH ♥!!", "{name} making more and more happy noises until something happens. They makes another ♥ cute noise ♥, followed by a really big smile!"],
-            dream: ["{name} dreams of a happy place, it feels soooo ♥ good ♥! But oddly sticky...",
-                "In deep dream, it comes! You are the winner! {name} don't know of what but it feel good! Its ♥ exhilarating ♥! Phu!",
-                "Half asleep {name} feels how something amazing is happening. It builds and finally releases in a ♥ big clash ♥! Exhausted they fall asleep immediately."],
-            accident: ["Oh NO! {name}'s energetic humping ripped open their diaper. It's... it's everywhere! What a ♥ sticky ♥ mess!"]
+            normal: ["{name} feels themself getting close! It's amazing, it's OH! ♥ OH ♥!🍦!", "{name} making more and more happy noises until something happens. They makes another ♥ cute noise ♥, 🍦 followed by a really big smile!"],
+            dream: ["{name} dreams of a happy place, it feels soooo ♥ good ♥! But oddly🍦 sticky...",
+                "In deep dream, it comes! You are the winner! {name} don't know of what but it feel good! Its ♥ exhilarating ♥! 🍦 Phu!",
+                "Half asleep {name} feels how something amazing is happening. It builds and finally releases in a ♥ big clash ♥! 🍦 Exhausted they fall asleep immediately."],
+            accident: ["Oh NO! {name}'s energetic humping ripped open their diaper. It's... it's everywhere! What a ♥ sticky ♥ mess 🍦!"]
         },
         [this.CUM_PREVENTION]: {
             normal: ["{name} gets tense and agitated, red in the face and whiny. But but 🔐 nothing 🔐 really happens, beside some cute noises."],
@@ -777,7 +787,7 @@ export class DiaperActorHelper extends ActorHelper {
             }
             const allFluids = this.allFluidsCount;
             const allProtection = this.protectionLevel;
-            return getRandomValue(key).formatUnicorn({"diaper" : this.diaper.name}) +" ("+allFluids+"/"+allProtection+")"
+            return getRandomValue(key).formatUnicorn({"diaper" : this.diaper.name, "is": this.diaper.name.endsWith("s") ? "are" : "is"}) +" ("+allFluids+"/"+allProtection+")"
         }
     }
     informAboutDiaperState(){
