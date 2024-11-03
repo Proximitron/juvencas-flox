@@ -711,12 +711,12 @@ export class DiaperActorHelper extends ActorHelper {
         [this.DIAPER_STATE_KEY]: {
             normal: ["Ups! This is an error, please report this!"],
             "Soiled Clothing": ["The {diaper} {is} full 💩 and 💦 leaking 💦 badly. 🤢 Serious 🤢 cleanup required, quickly!"],
-            "Leaking": ["The {diaper} {is} full 💩 and leaking 💦 a little!"],
-            "Full Diaper": ["The {diaper} {is} full 💩 to the brim, but it is not leaking yet."],
+            "Leaking": ["The {diaper} {is} full 💩 and leak 💦 a little!"],
+            "Full Diaper": ["The {diaper} {is} full 💩 to the brim. No leaking so far."],
             "Heavy Diaper": ["The {diaper} {is} heavy ⛰️. Probably time for a change."],
             "Soggy Diaper": ["The {diaper} {is} used 🌧, but not in a bad way."],
-            "Diapered": ["The {diaper} {is} pretty ☀️ dry doesn't crinkle."],
-            "Crinkel Pants": ["The {diaper} {is} bone 🦴 dry and crinkels."],
+            "Diapered": ["The {diaper} {is} pretty ☀️ dry."],
+            "Crinkel Pants": ["The {diaper} {is} bone 🦴 dry. They crinkel!"],
         },
         [this.STATE_CONCENTRATING]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
