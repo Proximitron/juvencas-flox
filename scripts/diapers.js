@@ -458,6 +458,7 @@ export class DiaperActorHelper extends ActorHelper {
         // Diaper Capacity calc END
 
         // Diaper State calc END
+        let diaperStateWasChanged = false;
         let diaperStateUpdates = {};
         const [diaperStateTypeStr, diaperStateStr] = this.constructor.DIAPER_STATE_KEY.split(".");
         const dpState = this.getActorResource(diaperStateTypeStr,diaperStateStr);
@@ -482,6 +483,7 @@ export class DiaperActorHelper extends ActorHelper {
             }
             if (Object.keys(diaperStateUpdates).length > 0) {
                 dpState.update(diaperStateUpdates);
+                diaperStateWasChanged = true;
                 diaperStateUpdates = {};
             }
 
@@ -495,8 +497,12 @@ export class DiaperActorHelper extends ActorHelper {
             }
 
             if (Object.keys(diaperStateUpdates).length > 0) {
+                diaperStateWasChanged = true;
                 dpState.update(diaperStateUpdates);
             }
+        }
+        if(diaperStateWasChanged){
+            this.informAboutDiaperState();
         }
         // Diaper State calc END
     }
@@ -774,6 +780,18 @@ export class DiaperActorHelper extends ActorHelper {
             return getRandomValue(key).formatUnicorn({"diaper" : this.diaper.name}) +" ("+allFluids+"/"+allProtection+")"
         }
     }
+    informAboutDiaperState(){
+        const messageHeaderPC = "<b>Diaper Report</b><br>";
+        const watcherPerspective = this.diaperStateInfoMsg();
+
+        const chatData = {
+            user: this.actorUser.id,
+            speaker: ChatMessage.getSpeaker(),
+            content: messageHeaderPC + watcherPerspective
+        };
+
+        ChatMessage.create(chatData, {});
+    }
     async informAboutAccident(type,subType,source = this.constructor.STATE_CONCENTRATING) {
         console.log(`Macro | ${this.actor.name} had an ${type}-Accident of ${type}`);
 
@@ -817,7 +835,6 @@ export class DiaperActorHelper extends ActorHelper {
         } else {
             console.error(`Macro | informAboutAccident encountered unknown type ${type}`)
         }
-        watcherPerspective *= this.diaperStateInfoMsg();
 
         const chatData = {
             user: this.actorUser.id,
