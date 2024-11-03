@@ -1,1 +1,1 @@
-console.log('flox-babyfur | Lib startup!');
+console.log('juvencas-flox | Lib startup!');

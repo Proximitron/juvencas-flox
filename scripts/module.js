@@ -10,7 +10,7 @@ Hooks.once('init', async function() {
 	game.sfrpg.documents.ItemSFRPG = ItemSFRPGWorkaround;
 	CONFIG.Item.documentClass = ItemSFRPGWorkaround;
 */
-	console.log("Flox-Babyfur | [INIT] Overriding document classes START");
+	console.log("juvencas-flox | [INIT] Overriding document classes START");
 	/*game.sfrpg.entities.ActorSFRPG = DiapersActorSFRG;
 	game.sfrpg.documents.ActorSFRPG = DiapersActorSFRG;
 	CONFIG.Actor.documentClass = DiapersActorSFRG;
@@ -27,7 +27,7 @@ Hooks.once('init', async function() {
 	});
 
 	initializeShopSystem();
-	console.log("Flox-Babyfur | [INIT] Overriding document classes END");
+	console.log("juvencas-flox | [INIT] Overriding document classes END");
 });
 
 Hooks.once('ready', async function() {

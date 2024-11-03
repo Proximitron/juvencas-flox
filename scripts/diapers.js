@@ -320,6 +320,7 @@ export class DiaperActorHelper extends ActorHelper {
     static DIAPER_STATE_KEY = "protection.state";
     static DIAPER_CAPACITY_KEY = "protection.capacity";
     static POTTY_TRAINING_KEY = "potty.training";
+    static REPORT_DIAPER_CONTENT ="DiaperContent"
 
     static CUM_PREVENTION = "Caged";
 
@@ -430,6 +431,7 @@ export class DiaperActorHelper extends ActorHelper {
         target.forEach(item => amount += Number(item.system.quantity));
         return amount;
     }
+
     updateDiaperStateResources() {
         const diaperWetness = this.diaperWetness;
         const diaperProtection = this.diaperProtectionLevel;
@@ -596,7 +598,7 @@ export class DiaperActorHelper extends ActorHelper {
         }
     }
     static accidentResults = {
-        [this.DIAPER_STATE_KEY]: {[this.PEE]: 30,[this.POO]: 15},
+        [this.STATE_CONCENTRATING]: {[this.PEE]: 30,[this.POO]: 15},
         [this.POO_ALLOWED_POTTY_TRAINING]: {[this.POO]: 100},
         [this.CUM_ALLOWED_POTTY_TRAINING]: {[this.CUM]: 100}
     }
@@ -621,7 +623,7 @@ export class DiaperActorHelper extends ActorHelper {
             return source;
         }
     }
-    async rollPottyCheck(source,effectAmount = 1){
+    async rollPottyCheck(source,effectAmount = 2){
         const sourceName = this.constructor.sourceToItemName(source);
         console.log(`Potty check for ${sourceName}`)
         let accidentMap;
@@ -630,8 +632,8 @@ export class DiaperActorHelper extends ActorHelper {
             console.log("Found AccidentMap for "+sourceName);
         }
         else {
-            accidentMap = this.constructor.accidentResults[this.constructor.DIAPER_STATE_KEY];
-            console.log("Selecting default AccidentMap for "+sourceName);
+            accidentMap = this.constructor.accidentResults[this.constructor.STATE_CONCENTRATING];
+            console.log("Selecting default (concentrating) AccidentMap for "+sourceName);
         }
         var hadAccident = false;
         for (const [accidentType, accidentChance] of Object.entries(accidentMap)) {
@@ -691,25 +693,32 @@ export class DiaperActorHelper extends ActorHelper {
 
     static informsMsg = {
         [this.DIAPER_STATE_KEY]: {
-            normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"]
+            normal: ["Ups! This is an error, please report this!"],
+            "Soiled Clothing": ["The {diaper} is full 💩 and 💦 leaking 💦 badly. 🤢 Serious 🤢 cleanup required, quickly!"],
+            "Leaking": ["The {diaper} is full 💩 and leaking 💦 a little!"],
+            "Full Diaper": ["The {diaper} is full 💩 to the brim, but it is not leaking yet."],
+            "Heavy Diaper": ["The {diaper} feels heavy ⛰️. Probably time for a change."],
+            "Soggy Diaper": ["The {diaper} feels used 🌧, but not in a bad way."],
+            "Diapered": ["The {diaper} feels pretty dry ☀️ doesn't crinkle."],
+            "Crinkel Pants": ["{name}'s {diaper} is bone dry 🦴 and crinkels."],
         },
         [this.STATE_CONCENTRATING]: {
             normal: ["{name} was concentrating really hard on what they are doing.","What was that?", "Is that...","Momentarily distracted {name} forgot something...","This is trifficult!"],
             dream: ["Deep in a slumber.","While sleeping."]
         },
         [this.PEE]: {
-            normal: ["{name} pauses their adventure, looking 🌧 momentarily puzzled 🌧, but then continues with a contented grin.",
-                "A warm glow seems to emanate from {name}, and they look more 🌧 relaxed 🌧 than before.", "You hear a surprised noise from {name} as their diaper is getting 🌧 warm 🌧.",
-                "{name}'s cheeks turn a slight shade of pink as they momentarily shift from 🌧 foot to foot 🌧.",
-                "{name} momentarily glances down, then up with a reassured smile as if a 🌧 mild inconvenience 🌧 was smoothly handled by their diaper."],
-            dream: ["A gentle, warm spring bubbles up in {name}'s dreamland, surrounding them with 🌧 soothing warmth 🌧.","In one of {name}'s dreams it seams to 🌧 rain 🌧.",
-                "A very big, 🌧 warm lake 🌧. {name} feels happy and relaxed.", "{name} feels fuzzy and warm.", "Unnoticed by {name}, a 🌧 containment breach 🌧 occurred under the blankie.",
-                "{name} dreams of floating down a peaceful river, basking in the gentle warmth of the sun.","{name} dreams of exploring a lush, alien planet with streams of 🌧 liquid gold 🌧 that feel pleasantly warm.",
-                "In the dreamspace, {name} visits a thermal moon where geysers burst with soothing, 🌧 warm vapors 🌧."],
-            accident: ["Oops! Looks like {name}'s diapers had 🌧 containment breach 🌧! Clean-up required!",
-                "Unexpectedly, there seems to be a major 🌧 leak 🌧 around {name}. Maintenance required immediatly.",
-                "Looks like {name}'s containment system was overwhelmed. There's a bit of a 🌧 spill 🌧 that needs attention!",
-                "There’s a noticeable 🌧 puddle 🌧 forming around {name}, an indication of an unexpected overflow."]},
+            normal: ["{name} pauses their adventure, looking 💧 momentarily puzzled 💧, but then continues with a contented grin.",
+                "A warm glow seems to emanate from {name}, and they look more 💧 relaxed 💧 than before.", "You hear a surprised noise from {name} as their diaper is getting 💧 warm 💧.",
+                "{name}'s cheeks turn a slight shade of pink as they momentarily shift from 💧 foot to foot 💧.",
+                "{name} momentarily glances down, then up with a reassured smile as if a 💧 mild inconvenience 💧 was smoothly handled by their diaper."],
+            dream: ["A gentle, warm spring bubbles up in {name}'s dreamland, surrounding them with 💧 soothing warmth 💧.","In one of {name}'s dreams it seams to 💧 rain 💧.",
+                "A very big, 💧 warm lake 💧. {name} feels happy and relaxed.", "{name} feels fuzzy and warm.", "Unnoticed by {name}, a 💧 containment breach 💧 occurred under the blankie.",
+                "{name} dreams of floating down a peaceful river, basking in the gentle warmth of the sun.","{name} dreams of exploring a lush, alien planet with streams of 💧 liquid gold 💧 that feel pleasantly warm.",
+                "In the dreamspace, {name} visits a thermal moon where geysers burst with soothing, 💧 warm vapors 💧."],
+            accident: ["Oops! Looks like {name}'s diapers had 💧 containment breach 💧! Clean-up required!",
+                "Unexpectedly, there seems to be a major 💧 leak 💧 around {name}. Maintenance required immediatly.",
+                "Looks like {name}'s containment system was overwhelmed. There's a bit of a 💧 spill 💧 that needs attention!",
+                "There’s a noticeable 💧 puddle 💧 forming around {name}, an indication of an unexpected overflow."]},
         [this.POO]: {
             normal: ["{name} takes a moment, concentrating intensely on a 💩 'difficult task' 💩 before smiling triumphantly.",
                 "{name} freezes up for a second and squats down. They makes a small, cute noise followed by a 💩 relieved 💩 smile.",
@@ -748,6 +757,22 @@ export class DiaperActorHelper extends ActorHelper {
             key = this.constructor.informsMsg[type]["normal"];
         }
         return getRandomValue(key).formatUnicorn({"name" : this.actor.name})
+    }
+    diaperStateInfoMsg(){
+        const stateKey = this.constructor.DIAPER_STATE_KEY;
+        const [diaperStateTypeStr, diaperStateStr] = stateKey.split(".");
+        const dpState = this.getActorResource(diaperStateTypeStr,diaperStateStr);
+        if(dpState !== undefined) {
+            const diaperStateCombTrack = this.getCombatTrackerData(dpState);
+
+            let key = this.constructor.informsMsg[stateKey][diaperStateCombTrack.title];
+            if(key === undefined){
+                key = this.constructor.informsMsg[stateKey]["normal"];
+            }
+            const allFluids = this.allFluidsCount;
+            const allProtection = this.protectionLevel;
+            return getRandomValue(key).formatUnicorn({"diaper" : this.diaper.name}) +" ("+allFluids+"/"+allProtection+")"
+        }
     }
     async informAboutAccident(type,subType,source = this.constructor.STATE_CONCENTRATING) {
         console.log(`Macro | ${this.actor.name} had an ${type}-Accident of ${type}`);
@@ -792,6 +817,7 @@ export class DiaperActorHelper extends ActorHelper {
         } else {
             console.error(`Macro | informAboutAccident encountered unknown type ${type}`)
         }
+        watcherPerspective *= this.diaperStateInfoMsg();
 
         const chatData = {
             user: this.actorUser.id,
