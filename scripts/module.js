@@ -51,11 +51,11 @@ Hooks.on("afterItemsProcessed", function(actor){
 	if(helper) helper.updateDiaperStateResources();
 });
 Hooks.on("preUpdateActor", function(actor, data, event, affectedUid) {
-	if(typeof data?.system?.currency?.upb !== "undefined"){
+	if(typeof data?.system?.currency?.upb !== "undefined" && actor.system.currency.upb != data.system.currency.upb){
 		const helper = DiaperActorHelper.byActor(actor);
 		if(helper) helper.whisper("UPB update:<br>"+actor.system.currency.upb+" TO "+data.system.currency.upb);
 	}
-	if(typeof data?.system?.currency?.credit !== "undefined"){
+	if(typeof data?.system?.currency?.credit !== "undefined" && actor.system.currency.credit != data.system.currency.credit){
 		const helper = DiaperActorHelper.byActor(actor);
 		if(helper) helper.whisper("Credit update:<br>"+actor.system.currency.credit+" TO "+data.system.currency.credit);
 	}
